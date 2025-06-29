@@ -21,6 +21,10 @@ interface AppContextType {
   findCustomerByEmail: (email: string) => Customer | undefined;
   findCustomerByPhone: (phone: string) => Customer | undefined;
   addCustomer: (customer: Omit<Customer, 'id'>) => Customer | null;
+  // Funções para níveis
+  addLevel: (level: Omit<CustomerLevel, 'id'>) => void;
+  updateLevel: (id: string, level: Partial<CustomerLevel>) => void;
+  deleteLevel: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -360,7 +364,7 @@ const getFullName = (customer: Customer): string => {
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
-  const [levels] = useState<CustomerLevel[]>(mockLevels);
+  const [levels, setLevels] = useState<CustomerLevel[]>(mockLevels);
   const [movements, setMovements] = useState<PointMovement[]>(mockMovements);
   const [rewards] = useState<Reward[]>(mockRewards);
   const [campaigns] = useState<Campaign[]>(mockCampaigns);
@@ -504,6 +508,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setReferralTypes(prev => prev.filter(type => type.id !== id));
   };
 
+  // Funções para gerenciar níveis
+  const addLevel = (levelData: Omit<CustomerLevel, 'id'>) => {
+    const newLevel: CustomerLevel = {
+      ...levelData,
+      id: Date.now().toString()
+    };
+    setLevels(prev => [...prev, newLevel].sort((a, b) => a.order - b.order));
+  };
+
+  const updateLevel = (id: string, updatedLevel: Partial<CustomerLevel>) => {
+    setLevels(prev => 
+      prev.map(level => 
+        level.id === id ? { ...level, ...updatedLevel } : level
+      ).sort((a, b) => a.order - b.order)
+    );
+
+    // Atualizar clientes que possuem este nível
+    const updatedLevelData = levels.find(l => l.id === id);
+    if (updatedLevelData) {
+      const finalLevel = { ...updatedLevelData, ...updatedLevel };
+      setCustomers(prev =>
+        prev.map(customer =>
+          customer.level.id === id ? { ...customer, level: finalLevel } : customer
+        )
+      );
+    }
+  };
+
+  const deleteLevel = (id: string) => {
+    // Não permitir deletar se há clientes neste nível
+    const customersWithLevel = customers.filter(customer => customer.level.id === id);
+    if (customersWithLevel.length > 0) {
+      alert(`Não é possível deletar este nível pois há ${customersWithLevel.length} cliente(s) associado(s) a ele.`);
+      return;
+    }
+
+    // Não permitir deletar se é o último nível
+    if (levels.length <= 1) {
+      alert('Não é possível deletar o último nível. Deve haver pelo menos um nível ativo.');
+      return;
+    }
+
+    setLevels(prev => prev.filter(level => level.id !== id));
+  };
+
   return (
     <AppContext.Provider value={{
       customers,
@@ -524,7 +573,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       findCustomerByDocument,
       findCustomerByEmail,
       findCustomerByPhone,
-      addCustomer
+      addCustomer,
+      addLevel,
+      updateLevel,
+      deleteLevel
     }}>
       {children}
     </AppContext.Provider>
