@@ -40,6 +40,67 @@ export const useApp = () => {
   return context;
 };
 
+// Mock levels como fallback
+const mockLevels: CustomerLevel[] = [
+  {
+    id: 'bronze-level',
+    name: 'Bronze',
+    color: '#CD7F32',
+    icon: 'award',
+    order: 1,
+    requirements: {
+      minPoints: 0,
+      minPurchaseValue: 0,
+      timeframe: 0
+    },
+    benefits: {
+      pointsMultiplier: 1.0,
+      referralBonus: 1.0,
+      freeShipping: false,
+      exclusiveEvents: false,
+      customRewards: []
+    }
+  },
+  {
+    id: 'silver-level',
+    name: 'Prata',
+    color: '#C0C0C0',
+    icon: 'star',
+    order: 2,
+    requirements: {
+      minPoints: 1000,
+      minPurchaseValue: 500,
+      timeframe: 365
+    },
+    benefits: {
+      pointsMultiplier: 1.2,
+      referralBonus: 1.5,
+      freeShipping: true,
+      exclusiveEvents: false,
+      customRewards: []
+    }
+  },
+  {
+    id: 'gold-level',
+    name: 'Ouro',
+    color: '#FFD700',
+    icon: 'crown',
+    order: 3,
+    requirements: {
+      minPoints: 5000,
+      minPurchaseValue: 2000,
+      timeframe: 365
+    },
+    benefits: {
+      pointsMultiplier: 1.5,
+      referralBonus: 2.0,
+      freeShipping: true,
+      exclusiveEvents: true,
+      customRewards: []
+    }
+  }
+];
+
 // Função para validar CPF
 const validateCPF = (cpf: string): boolean => {
   const cleanCPF = cpf.replace(/[^\d]/g, '');
@@ -189,7 +250,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Transformar dados do banco para o formato da aplicação
   const customers: Customer[] = dbCustomers.map(transformCustomerFromDB);
-  const levels: CustomerLevel[] = dbLevels.map(transformLevelFromDB);
+  
+  // Use mock levels as fallback if database levels are empty
+  const levels: CustomerLevel[] = dbLevels.length > 0 ? dbLevels.map(transformLevelFromDB) : mockLevels;
+  
   const movements: PointMovement[] = dbMovements.map(transformMovementFromDB);
   
   const rewards: Reward[] = dbRewards.map(reward => ({
@@ -364,9 +428,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     try {
+      // Ensure we have a valid level - use the first available level
+      const defaultLevel = levels[0];
+      if (!defaultLevel) {
+        console.error('Nenhum nível disponível para atribuir ao cliente');
+        return null;
+      }
+
       const dbCustomer = await addCustomerDB({
         ...customerData,
-        document: formatCPF(customerData.document)
+        document: formatCPF(customerData.document),
+        level: defaultLevel
       });
       return transformCustomerFromDB(dbCustomer);
     } catch (error) {
