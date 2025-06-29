@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Filter, Plus, TrendingUp, Gift, Edit, Calendar, QrCode, Receipt } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { PointMovement } from '../types';
+import { PointMovement, Customer } from '../types';
 
 const Movements: React.FC = () => {
   const { movements, customers, addMovement, updateCustomer } = useApp();
@@ -16,10 +16,16 @@ const Movements: React.FC = () => {
     reference: ''
   });
 
+  const getFullName = (customer: Customer): string => {
+    return `${customer.firstName} ${customer.lastName}`.trim();
+  };
+
   const filteredMovements = movements.filter(movement => {
     const customer = customers.find(c => c.id === movement.customerId);
-    const matchesSearch = customer?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         movement.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = customer ? 
+      getFullName(customer).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.description.toLowerCase().includes(searchTerm.toLowerCase()) :
+      movement.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || movement.type === typeFilter;
     return matchesSearch && matchesType;
   });
@@ -188,7 +194,9 @@ const Movements: React.FC = () => {
                       {new Date(movement.date).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{customer?.name}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {customer ? getFullName(customer) : 'Cliente não encontrado'}
+                      </div>
                       <div className="text-sm text-gray-500">{customer?.email}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -241,7 +249,7 @@ const Movements: React.FC = () => {
                 >
                   <option value="">Selecione um cliente</option>
                   {customers.map(customer => (
-                    <option key={customer.id} value={customer.id}>{customer.name}</option>
+                    <option key={customer.id} value={customer.id}>{getFullName(customer)}</option>
                   ))}
                 </select>
               </div>
