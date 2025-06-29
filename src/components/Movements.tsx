@@ -195,6 +195,11 @@ const Movements: React.FC = () => {
     }
   };
 
+  const getBranchName = (branchId: string): string => {
+    const branch = branches.find(b => b.id === branchId);
+    return branch ? branch.name : 'Filial não encontrada';
+  };
+
   const getModalTitle = () => {
     switch (modalActionType) {
       case 'add_points': return 'Registrar Nova Compra';
@@ -211,11 +216,6 @@ const Movements: React.FC = () => {
       case 'redeem_online': return 'Gerar Cupom';
       default: return 'Adicionar';
     }
-  };
-
-  const getBranchName = (branchId: string): string => {
-    const branch = branches.find(b => b.id === branchId);
-    return branch ? branch.name : 'Filial não encontrada';
   };
 
   const isFormValid = () => {
@@ -462,6 +462,11 @@ const Movements: React.FC = () => {
                     </option>
                   ))}
                 </select>
+                {!selectedBranchForMovement && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Selecione a filial onde a movimentação está sendo realizada
+                  </p>
+                )}
               </div>
 
               {!modalActionType && (
