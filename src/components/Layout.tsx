@@ -8,6 +8,7 @@ import {
   Settings,
   MessageSquare,
   Target,
+  Building,
   Menu,
   X
 } from 'lucide-react';
@@ -24,6 +25,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
     { id: 'customers', label: 'Clientes', icon: Users },
+    { id: 'branches', label: 'Filiais', icon: Building },
     { id: 'levels', label: 'Níveis', icon: Star },
     { id: 'movements', label: 'Movimentos', icon: TrendingUp },
     { id: 'rewards', label: 'Recompensas', icon: Gift },

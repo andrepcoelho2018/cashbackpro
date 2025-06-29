@@ -48,10 +48,25 @@ export interface CustomerLevel {
   };
 }
 
+export interface Branch {
+  id: string;
+  name: string;
+  code: string; // Código único da filial (ex: FIL001)
+  address: string;
+  phone: string;
+  email: string;
+  manager: string;
+  isActive: boolean;
+  color: string; // Cor para identificação visual
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PointMovement {
   id: string;
   customerId: string;
   customerDocument: string; // CPF para referência rápida
+  branchId: string; // Nova propriedade para identificar a filial
   type: 'earn' | 'redeem' | 'expire' | 'admin_adjust' | 'referral' | 'refund';
   points: number;
   description: string;

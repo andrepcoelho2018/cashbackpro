@@ -3,6 +3,7 @@ import { AppProvider } from './context/AppContext';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Customers from './components/Customers';
+import Branches from './components/Branches';
 import Levels from './components/Levels';
 import Movements from './components/Movements';
 import Rewards from './components/Rewards';
@@ -21,6 +22,8 @@ function App() {
         return <Dashboard />;
       case 'customers':
         return <Customers />;
+      case 'branches':
+        return <Branches />;
       case 'levels':
         return <Levels />;
       case 'movements':
