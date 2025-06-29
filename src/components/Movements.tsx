@@ -4,13 +4,14 @@ import { useApp } from '../context/AppContext';
 import { PointMovement, Customer } from '../types';
 
 const Movements: React.FC = () => {
-  const { movements, customers, addMovement, updateCustomer } = useApp();
+  const { movements, customers, addMovement, updateCustomer, findCustomerByDocument } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'earn' | 'redeem' | 'admin_adjust'>('all');
   const [showMovementModal, setShowMovementModal] = useState(false);
   const [modalActionType, setModalActionType] = useState<'add_points' | 'redeem_offline' | 'redeem_online' | null>(null);
+  const [searchCustomerDocument, setSearchCustomerDocument] = useState('');
+  const [selectedCustomerForMovement, setSelectedCustomerForMovement] = useState<Customer | null>(null);
   const [newMovement, setNewMovement] = useState({
-    customerId: '',
     type: 'earn' as 'earn' | 'redeem' | 'admin_adjust',
     points: 0,
     description: '',
@@ -36,29 +37,57 @@ const Movements: React.FC = () => {
     return `ONLINE-${Date.now().toString().slice(-6)}`;
   };
 
+  const handleDocumentChange = (document: string) => {
+    // Formatar CPF enquanto digita
+    const cleanDocument = document.replace(/[^\d]/g, '');
+    let formattedDocument = cleanDocument;
+    
+    if (cleanDocument.length >= 4) {
+      formattedDocument = cleanDocument.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+    }
+    if (cleanDocument.length >= 7) {
+      formattedDocument = cleanDocument.replace(/(\d{3})\.(\d{3})(\d{1,3})/, '$1.$2.$3');
+    }
+    if (cleanDocument.length >= 10) {
+      formattedDocument = cleanDocument.replace(/(\d{3})\.(\d{3})\.(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+    }
+
+    setSearchCustomerDocument(formattedDocument);
+
+    // Buscar cliente se o CPF estiver completo
+    if (cleanDocument.length === 11) {
+      const foundCustomer = findCustomerByDocument(cleanDocument);
+      setSelectedCustomerForMovement(foundCustomer || null);
+    } else {
+      setSelectedCustomerForMovement(null);
+    }
+  };
+
   const handleOpenAddPointsModal = () => {
     setModalActionType('add_points');
     setNewMovement({
-      customerId: '',
       type: 'earn',
       points: 0,
       description: '',
       reference: '',
       couponCode: ''
     });
+    setSearchCustomerDocument('');
+    setSelectedCustomerForMovement(null);
     setShowMovementModal(true);
   };
 
   const handleOpenRedeemOfflineModal = () => {
     setModalActionType('redeem_offline');
     setNewMovement({
-      customerId: '',
       type: 'redeem',
       points: 100,
       description: 'Resgate offline: Desconto R$ 10,00',
       reference: '',
       couponCode: ''
     });
+    setSearchCustomerDocument('');
+    setSelectedCustomerForMovement(null);
     setShowMovementModal(true);
   };
 
@@ -66,21 +95,23 @@ const Movements: React.FC = () => {
     setModalActionType('redeem_online');
     const couponCode = generateCouponCode();
     setNewMovement({
-      customerId: '',
       type: 'redeem',
       points: 100,
       description: 'Resgate online: Desconto R$ 10,00',
       reference: '',
       couponCode: couponCode
     });
+    setSearchCustomerDocument('');
+    setSelectedCustomerForMovement(null);
     setShowMovementModal(true);
   };
 
   const handleCloseMovementModal = () => {
     setShowMovementModal(false);
     setModalActionType(null);
+    setSearchCustomerDocument('');
+    setSelectedCustomerForMovement(null);
     setNewMovement({
-      customerId: '',
       type: 'earn',
       points: 0,
       description: '',
@@ -90,10 +121,10 @@ const Movements: React.FC = () => {
   };
 
   const handleAddMovement = () => {
-    if (newMovement.customerId && newMovement.points && newMovement.description) {
+    if (selectedCustomerForMovement && newMovement.points && newMovement.description) {
       const movement: Omit<PointMovement, 'id'> = {
-        customerId: newMovement.customerId,
-        customerDocument: '',
+        customerId: selectedCustomerForMovement.id,
+        customerDocument: selectedCustomerForMovement.document,
         type: newMovement.type,
         points: newMovement.type === 'redeem' ? -Math.abs(newMovement.points) : newMovement.points,
         description: newMovement.description,
@@ -105,11 +136,8 @@ const Movements: React.FC = () => {
       addMovement(movement);
       
       // Update customer points
-      const customer = customers.find(c => c.id === newMovement.customerId);
-      if (customer) {
-        const pointsChange = newMovement.type === 'redeem' ? -Math.abs(newMovement.points) : newMovement.points;
-        updateCustomer(customer.id, { points: customer.points + pointsChange });
-      }
+      const pointsChange = newMovement.type === 'redeem' ? -Math.abs(newMovement.points) : newMovement.points;
+      updateCustomer(selectedCustomerForMovement.id, { points: selectedCustomerForMovement.points + pointsChange });
       
       handleCloseMovementModal();
     }
@@ -326,17 +354,44 @@ const Movements: React.FC = () => {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-                <select
-                  value={newMovement.customerId}
-                  onChange={(e) => setNewMovement({...newMovement, customerId: e.target.value})}
+                <label className="block text-sm font-medium text-gray-700 mb-1">CPF do Cliente</label>
+                <input
+                  type="text"
+                  value={searchCustomerDocument}
+                  onChange={(e) => handleDocumentChange(e.target.value)}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Selecione um cliente</option>
-                  {customers.map(customer => (
-                    <option key={customer.id} value={customer.id}>{getFullName(customer)}</option>
-                  ))}
-                </select>
+                />
+                
+                {/* Exibir cliente encontrado ou mensagem de erro */}
+                {searchCustomerDocument.replace(/[^\d]/g, '').length === 11 && (
+                  <div className="mt-2">
+                    {selectedCustomerForMovement ? (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                            <span className="text-sm font-medium text-green-600">
+                              {selectedCustomerForMovement.firstName.charAt(0)}{selectedCustomerForMovement.lastName.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-green-800">
+                              {getFullName(selectedCustomerForMovement)}
+                            </p>
+                            <p className="text-xs text-green-600">
+                              {selectedCustomerForMovement.email} • {selectedCustomerForMovement.points} pontos
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-800">Cliente não encontrado com este CPF</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {!modalActionType && (
@@ -423,7 +478,8 @@ const Movements: React.FC = () => {
               </button>
               <button
                 onClick={handleAddMovement}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={!selectedCustomerForMovement}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {getModalButtonText()}
               </button>
