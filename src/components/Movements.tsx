@@ -3,6 +3,7 @@ import { Search, Filter, Plus, TrendingUp, Gift, Edit, Calendar, QrCode, Receipt
 import { useApp } from '../context/AppContext';
 import { PointMovement, Customer } from '../types';
 import RedemptionReceipt from './RedemptionReceipt';
+import { generateUniqueCouponCode } from '../utils/couponGenerator';
 
 const Movements: React.FC = () => {
   const { movements, customers, addMovement, updateCustomer, findCustomerByDocument } = useApp();
@@ -40,10 +41,6 @@ const Movements: React.FC = () => {
     const matchesType = typeFilter === 'all' || movement.type === typeFilter;
     return matchesSearch && matchesType;
   });
-
-  const generateCouponCode = () => {
-    return `ONLINE-${Date.now().toString().slice(-6)}`;
-  };
 
   const handleDocumentChange = (document: string) => {
     // Formatar CPF enquanto digita
@@ -87,12 +84,14 @@ const Movements: React.FC = () => {
 
   const handleOpenRedeemOfflineModal = () => {
     setModalActionType('redeem_offline');
+    // Generate unique coupon code for offline redemption
+    const couponCode = generateUniqueCouponCode('offline');
     setNewMovement({
       type: 'redeem',
       points: 100,
       description: 'Resgate offline: Desconto R$ 10,00',
       reference: '',
-      couponCode: ''
+      couponCode: couponCode
     });
     setSearchCustomerDocument('');
     setSelectedCustomerForMovement(null);
@@ -101,7 +100,8 @@ const Movements: React.FC = () => {
 
   const handleOpenRedeemOnlineModal = () => {
     setModalActionType('redeem_online');
-    const couponCode = generateCouponCode();
+    // Generate unique coupon code for online redemption
+    const couponCode = generateUniqueCouponCode('online');
     setNewMovement({
       type: 'redeem',
       points: 100,
@@ -350,7 +350,7 @@ const Movements: React.FC = () => {
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {movement.description}
                       {movement.couponCode && (
-                        <div className="text-xs text-blue-600 mt-1">
+                        <div className="text-xs text-blue-600 mt-1 font-mono">
                           Cupom: {movement.couponCode}
                         </div>
                       )}
@@ -484,14 +484,22 @@ const Movements: React.FC = () => {
               {(modalActionType === 'redeem_offline' || modalActionType === 'redeem_online') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Código do Cupom</label>
-                  <input
-                    type="text"
-                    value={newMovement.couponCode}
-                    onChange={(e) => setNewMovement({...newMovement, couponCode: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder={modalActionType === 'redeem_offline' ? 'Digite o código do cupom' : 'Código gerado automaticamente'}
-                    readOnly={modalActionType === 'redeem_online'}
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={newMovement.couponCode}
+                      readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
+                    />
+                    <div className="absolute right-2 top-2">
+                      <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                        Único
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Código único gerado automaticamente para este resgate
+                  </p>
                 </div>
               )}
             </div>
