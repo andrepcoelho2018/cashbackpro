@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { Search, Filter, Plus, TrendingUp, Gift, Edit, Calendar, QrCode, Receipt } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { PointMovement, Customer } from '../types';
+import { PointMovement, Customer, Branch } from '../types';
 import RedemptionReceipt from './RedemptionReceipt';
 import { generateUniqueCouponCode } from '../utils/couponGenerator';
 
 const Movements: React.FC = () => {
-  const { movements, customers, addMovement, updateCustomer, findCustomerByDocument } = useApp();
+  const { movements, customers, branches, addMovement, updateCustomer, findCustomerByDocument } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'earn' | 'redeem' | 'admin_adjust'>('all');
   const [showMovementModal, setShowMovementModal] = useState(false);
   const [modalActionType, setModalActionType] = useState<'add_points' | 'redeem_offline' | 'redeem_online' | null>(null);
   const [searchCustomerDocument, setSearchCustomerDocument] = useState('');
   const [selectedCustomerForMovement, setSelectedCustomerForMovement] = useState<Customer | null>(null);
+  const [selectedBranchForMovement, setSelectedBranchForMovement] = useState<Branch | null>(null);
   const [newMovement, setNewMovement] = useState({
     type: 'earn' as 'earn' | 'redeem' | 'admin_adjust',
     points: 0,
@@ -68,6 +69,19 @@ const Movements: React.FC = () => {
     }
   };
 
+  const resetMovementForm = () => {
+    setSearchCustomerDocument('');
+    setSelectedCustomerForMovement(null);
+    setSelectedBranchForMovement(null);
+    setNewMovement({
+      type: 'earn',
+      points: 0,
+      description: '',
+      reference: '',
+      couponCode: ''
+    });
+  };
+
   const handleOpenAddPointsModal = () => {
     setModalActionType('add_points');
     setNewMovement({
@@ -77,8 +91,7 @@ const Movements: React.FC = () => {
       reference: '',
       couponCode: ''
     });
-    setSearchCustomerDocument('');
-    setSelectedCustomerForMovement(null);
+    resetMovementForm();
     setShowMovementModal(true);
   };
 
@@ -93,8 +106,7 @@ const Movements: React.FC = () => {
       reference: '',
       couponCode: couponCode
     });
-    setSearchCustomerDocument('');
-    setSelectedCustomerForMovement(null);
+    resetMovementForm();
     setShowMovementModal(true);
   };
 
@@ -109,30 +121,22 @@ const Movements: React.FC = () => {
       reference: '',
       couponCode: couponCode
     });
-    setSearchCustomerDocument('');
-    setSelectedCustomerForMovement(null);
+    resetMovementForm();
     setShowMovementModal(true);
   };
 
   const handleCloseMovementModal = () => {
     setShowMovementModal(false);
     setModalActionType(null);
-    setSearchCustomerDocument('');
-    setSelectedCustomerForMovement(null);
-    setNewMovement({
-      type: 'earn',
-      points: 0,
-      description: '',
-      reference: '',
-      couponCode: ''
-    });
+    resetMovementForm();
   };
 
   const handleAddMovement = () => {
-    if (selectedCustomerForMovement && newMovement.points && newMovement.description) {
+    if (selectedCustomerForMovement && selectedBranchForMovement && newMovement.points && newMovement.description) {
       const movement: Omit<PointMovement, 'id'> = {
         customerId: selectedCustomerForMovement.id,
         customerDocument: selectedCustomerForMovement.document,
+        branchId: selectedBranchForMovement.id,
         type: newMovement.type,
         points: newMovement.type === 'redeem' ? -Math.abs(newMovement.points) : newMovement.points,
         description: newMovement.description,
@@ -207,6 +211,18 @@ const Movements: React.FC = () => {
       case 'redeem_online': return 'Gerar Cupom';
       default: return 'Adicionar';
     }
+  };
+
+  const getBranchName = (branchId: string): string => {
+    const branch = branches.find(b => b.id === branchId);
+    return branch ? branch.name : 'Filial não encontrada';
+  };
+
+  const isFormValid = () => {
+    return selectedCustomerForMovement && 
+           selectedBranchForMovement && 
+           newMovement.points > 0 && 
+           newMovement.description.trim();
   };
 
   return (
@@ -312,6 +328,9 @@ const Movements: React.FC = () => {
                   Cliente
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Filial
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Tipo
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -338,6 +357,11 @@ const Movements: React.FC = () => {
                         {customer ? getFullName(customer) : 'Cliente não encontrado'}
                       </div>
                       <div className="text-sm text-gray-500">{customer?.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {getBranchName(movement.branchId)}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -376,7 +400,7 @@ const Movements: React.FC = () => {
       {/* Add Movement Modal */}
       {showMovementModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">{getModalTitle()}</h2>
             
             <div className="space-y-4">
@@ -419,6 +443,25 @@ const Movements: React.FC = () => {
                     )}
                   </div>
                 )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
+                <select
+                  value={selectedBranchForMovement?.id || ''}
+                  onChange={(e) => {
+                    const branch = branches.find(b => b.id === e.target.value);
+                    setSelectedBranchForMovement(branch || null);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione uma filial</option>
+                  {branches.filter(branch => branch.isActive).map(branch => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name} ({branch.code})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {!modalActionType && (
@@ -513,7 +556,7 @@ const Movements: React.FC = () => {
               </button>
               <button
                 onClick={handleAddMovement}
-                disabled={!selectedCustomerForMovement}
+                disabled={!isFormValid()}
                 className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {getModalButtonText()}
