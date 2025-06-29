@@ -140,6 +140,7 @@ export interface Database {
           reference: string | null
           coupon_code: string | null
           created_at: string
+          branch_id: string
         }
         Insert: {
           id?: string
@@ -152,6 +153,7 @@ export interface Database {
           reference?: string | null
           coupon_code?: string | null
           created_at?: string
+          branch_id: string
         }
         Update: {
           id?: string
@@ -164,6 +166,7 @@ export interface Database {
           reference?: string | null
           coupon_code?: string | null
           created_at?: string
+          branch_id?: string
         }
       }
       rewards: {
@@ -379,6 +382,47 @@ export interface Database {
           notifications?: any
           validation?: any
           terms?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      branches: {
+        Row: {
+          id: string
+          name: string
+          code: string
+          address: string
+          phone: string
+          email: string
+          manager: string
+          is_active: boolean
+          color: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          code: string
+          address: string
+          phone: string
+          email: string
+          manager: string
+          is_active?: boolean
+          color?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          code?: string
+          address?: string
+          phone?: string
+          email?: string
+          manager?: string
+          is_active?: boolean
+          color?: string
           created_at?: string
           updated_at?: string
         }

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { Customer, CustomerLevel, PointMovement, Reward, Campaign, Referral, ReferralType, Settings, CustomerValidation } from '../types';
+import { Customer, CustomerLevel, PointMovement, Reward, Campaign, Referral, ReferralType, Settings, CustomerValidation, Branch } from '../types';
 import { useSupabaseTable, useCustomers, usePointMovements } from '../hooks/useSupabase';
 
 interface AppContextType {
@@ -10,6 +10,7 @@ interface AppContextType {
   campaigns: Campaign[];
   referrals: Referral[];
   referralTypes: ReferralType[];
+  branches: Branch[];
   settings: Settings;
   loading: boolean;
   error: string | null;
@@ -28,6 +29,10 @@ interface AppContextType {
   addLevel: (level: Omit<CustomerLevel, 'id'>) => void;
   updateLevel: (id: string, level: Partial<CustomerLevel>) => void;
   deleteLevel: (id: string) => void;
+  // Funções para filiais
+  addBranch: (branch: Omit<Branch, 'id'>) => void;
+  updateBranch: (id: string, branch: Partial<Branch>) => void;
+  deleteBranch: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -185,6 +190,18 @@ const transformMovementFromDB = (dbMovement: any): PointMovement => ({
   couponCode: dbMovement.coupon_code
 });
 
+const transformBranchFromDB = (dbBranch: any): Branch => ({
+  id: dbBranch.id,
+  name: dbBranch.name,
+  code: dbBranch.code,
+  address: dbBranch.address,
+  phone: dbBranch.phone,
+  email: dbBranch.email,
+  manager: dbBranch.manager,
+  isActive: dbBranch.is_active,
+  color: dbBranch.color
+});
+
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Hooks do Supabase
   const { 
@@ -242,6 +259,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   } = useSupabaseTable('referral_types');
 
   const { 
+    data: dbBranches, 
+    loading: branchesLoading, 
+    error: branchesError,
+    insert: insertBranch,
+    update: updateBranchDB,
+    remove: removeBranch
+  } = useSupabaseTable('branches');
+
+  const { 
     data: dbSettings, 
     loading: settingsLoading, 
     error: settingsError,
@@ -255,6 +281,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const levels: CustomerLevel[] = dbLevels.length > 0 ? dbLevels.map(transformLevelFromDB) : mockLevels;
   
   const movements: PointMovement[] = dbMovements.map(transformMovementFromDB);
+  
+  const branches: Branch[] = dbBranches.map(transformBranchFromDB);
   
   const rewards: Reward[] = dbRewards.map(reward => ({
     id: reward.id,
@@ -342,12 +370,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Estado de loading geral
   const loading = customersLoading || levelsLoading || movementsLoading || 
                  rewardsLoading || campaignsLoading || referralsLoading || 
-                 referralTypesLoading || settingsLoading;
+                 referralTypesLoading || branchesLoading || settingsLoading;
 
   // Erro geral
   const error = customersError || levelsError || movementsError || 
                rewardsError || campaignsError || referralsError || 
-               referralTypesError || settingsError;
+               referralTypesError || branchesError || settingsError;
 
   // Funções de validação
   const findCustomerByDocument = (document: string): Customer | undefined => {
@@ -551,6 +579,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Funções para filiais
+  const addBranch = async (branchData: Omit<Branch, 'id'>) => {
+    try {
+      await insertBranch({
+        name: branchData.name,
+        code: branchData.code,
+        address: branchData.address,
+        phone: branchData.phone,
+        email: branchData.email,
+        manager: branchData.manager,
+        is_active: branchData.isActive,
+        color: branchData.color
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar filial:', error);
+    }
+  };
+
+  const updateBranch = async (id: string, updatedBranch: Partial<Branch>) => {
+    try {
+      const updateData: any = {};
+      
+      if (updatedBranch.name) updateData.name = updatedBranch.name;
+      if (updatedBranch.code) updateData.code = updatedBranch.code;
+      if (updatedBranch.address) updateData.address = updatedBranch.address;
+      if (updatedBranch.phone) updateData.phone = updatedBranch.phone;
+      if (updatedBranch.email) updateData.email = updatedBranch.email;
+      if (updatedBranch.manager) updateData.manager = updatedBranch.manager;
+      if (updatedBranch.isActive !== undefined) updateData.is_active = updatedBranch.isActive;
+      if (updatedBranch.color) updateData.color = updatedBranch.color;
+
+      await updateBranchDB(id, updateData);
+    } catch (error) {
+      console.error('Erro ao atualizar filial:', error);
+    }
+  };
+
+  const deleteBranch = async (id: string) => {
+    try {
+      await removeBranch(id);
+    } catch (error) {
+      console.error('Erro ao deletar filial:', error);
+    }
+  };
+
   // Funções para tipos de indicação
   const addReferralType = async (referralType: Omit<ReferralType, 'id'>) => {
     try {
@@ -607,6 +680,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       campaigns,
       referrals,
       referralTypes,
+      branches,
       settings,
       loading,
       error,
@@ -623,7 +697,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       addCustomer,
       addLevel,
       updateLevel,
-      deleteLevel
+      deleteLevel,
+      addBranch,
+      updateBranch,
+      deleteBranch
     }}>
       {children}
     </AppContext.Provider>
