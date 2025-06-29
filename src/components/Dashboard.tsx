@@ -1,9 +1,9 @@
 import React from 'react';
-import { Users, TrendingUp, Gift, UserPlus, Star, Award } from 'lucide-react';
+import { Users, TrendingUp, Gift, UserPlus, Star, Award, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const Dashboard: React.FC = () => {
-  const { customers, movements, rewards, referrals } = useApp();
+  const { customers, movements, rewards, referrals, clearAllData } = useApp();
 
   // Função para obter nome completo
   const getFullName = (customer: any): string => {
@@ -46,12 +46,32 @@ const Dashboard: React.FC = () => {
     .sort((a, b) => b.points - a.points)
     .slice(0, 5);
 
+  const handleClearAllData = async () => {
+    if (confirm('Tem certeza que deseja limpar TODOS os dados de clientes e movimentações? Esta ação não pode ser desfeita.')) {
+      try {
+        await clearAllData();
+        alert('Todos os dados foram limpos com sucesso!');
+      } catch (error) {
+        alert('Erro ao limpar dados. Tente novamente.');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <div className="text-sm text-gray-500">
-          Última atualização: {new Date().toLocaleString('pt-BR')}
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={handleClearAllData}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Limpar Dados
+          </button>
+          <div className="text-sm text-gray-500">
+            Última atualização: {new Date().toLocaleString('pt-BR')}
+          </div>
         </div>
       </div>
 
@@ -85,35 +105,43 @@ const Dashboard: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Movimentações Recentes
           </h2>
-          <div className="space-y-4">
-            {recentMovements.map((movement) => {
-              const customer = customers.find(c => c.id === movement.customerId);
-              return (
-                <div key={movement.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      movement.type === 'earn' ? 'bg-green-100' : 'bg-red-100'
+          {recentMovements.length > 0 ? (
+            <div className="space-y-4">
+              {recentMovements.map((movement) => {
+                const customer = customers.find(c => c.id === movement.customerId);
+                return (
+                  <div key={movement.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        movement.type === 'earn' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        <TrendingUp className={`w-5 h-5 ${
+                          movement.type === 'earn' ? 'text-green-600' : 'text-red-600'
+                        }`} />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">
+                          {customer ? getFullName(customer) : 'Cliente não encontrado'}
+                        </p>
+                        <p className="text-sm text-gray-500">{movement.description}</p>
+                      </div>
+                    </div>
+                    <div className={`text-sm font-medium ${
+                      movement.type === 'earn' ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      <TrendingUp className={`w-5 h-5 ${
-                        movement.type === 'earn' ? 'text-green-600' : 'text-red-600'
-                      }`} />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">
-                        {customer ? getFullName(customer) : 'Cliente não encontrado'}
-                      </p>
-                      <p className="text-sm text-gray-500">{movement.description}</p>
+                      {movement.type === 'earn' ? '+' : ''}{movement.points} pts
                     </div>
                   </div>
-                  <div className={`text-sm font-medium ${
-                    movement.type === 'earn' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {movement.type === 'earn' ? '+' : ''}{movement.points} pts
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Nenhuma movimentação encontrada</p>
+              <p className="text-sm text-gray-400">As movimentações aparecerão aqui quando criadas</p>
+            </div>
+          )}
         </div>
 
         {/* Top Customers */}
@@ -121,31 +149,39 @@ const Dashboard: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Top Clientes
           </h2>
-          <div className="space-y-4">
-            {topCustomers.map((customer, index) => (
-              <div key={customer.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Award className="w-5 h-5 text-blue-600" />
+          {topCustomers.length > 0 ? (
+            <div className="space-y-4">
+              {topCustomers.map((customer, index) => (
+                <div key={customer.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Award className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">
+                        {getFullName(customer)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Nível {customer.level.name}
+                      </p>
+                    </div>
                   </div>
-                  <div className="ml-3">
+                  <div className="text-right">
                     <p className="text-sm font-medium text-gray-900">
-                      {getFullName(customer)}
+                      {customer.points.toLocaleString()} pts
                     </p>
-                    <p className="text-sm text-gray-500">
-                      Nível {customer.level.name}
-                    </p>
+                    <p className="text-xs text-gray-500">#{index + 1}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {customer.points.toLocaleString()} pts
-                  </p>
-                  <p className="text-xs text-gray-500">#{index + 1}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Nenhum cliente encontrado</p>
+              <p className="text-sm text-gray-400">Os clientes aparecerão aqui quando cadastrados</p>
+            </div>
+          )}
         </div>
       </div>
 

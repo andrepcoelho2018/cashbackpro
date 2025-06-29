@@ -84,6 +84,23 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     }
   }
 
+  // Limpar todos os dados
+  const clearAll = async () => {
+    try {
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000') // Delete all records
+
+      if (error) throw error
+
+      setData([])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao limpar dados')
+      throw err
+    }
+  }
+
   useEffect(() => {
     fetchAll()
   }, [tableName])
@@ -96,6 +113,7 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     insert,
     update,
     remove,
+    clearAll,
     setError
   }
 }
@@ -215,6 +233,22 @@ export function useCustomers() {
     )
   }
 
+  const clearCustomers = async () => {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000') // Delete all records
+
+      if (error) throw error
+
+      setCustomers([])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao limpar clientes')
+      throw err
+    }
+  }
+
   useEffect(() => {
     fetchCustomers()
   }, [])
@@ -229,6 +263,7 @@ export function useCustomers() {
     findCustomerByDocument,
     findCustomerByEmail,
     findCustomerByPhone,
+    clearCustomers,
     setError
   }
 }
@@ -263,6 +298,7 @@ export function usePointMovements() {
         .insert({
           customer_id: movementData.customerId,
           customer_document: movementData.customerDocument,
+          branch_id: movementData.branchId,
           type: movementData.type,
           points: movementData.points,
           description: movementData.description,
@@ -283,6 +319,22 @@ export function usePointMovements() {
     }
   }
 
+  const clearMovements = async () => {
+    try {
+      const { error } = await supabase
+        .from('point_movements')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000') // Delete all records
+
+      if (error) throw error
+
+      setMovements([])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao limpar movimentações')
+      throw err
+    }
+  }
+
   useEffect(() => {
     fetchMovements()
   }, [])
@@ -293,6 +345,7 @@ export function usePointMovements() {
     error,
     fetchMovements,
     addMovement,
+    clearMovements,
     setError
   }
 }

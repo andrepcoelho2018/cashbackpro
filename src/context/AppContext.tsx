@@ -33,6 +33,8 @@ interface AppContextType {
   addBranch: (branch: Omit<Branch, 'id'>) => void;
   updateBranch: (id: string, branch: Partial<Branch>) => void;
   deleteBranch: (id: string) => void;
+  // Funções para limpeza de dados
+  clearAllData: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -103,6 +105,36 @@ const mockLevels: CustomerLevel[] = [
       exclusiveEvents: true,
       customRewards: []
     }
+  }
+];
+
+// Mock branches como fallback
+const mockBranches: Branch[] = [
+  {
+    id: '550e8400-e29b-41d4-a716-446655440100',
+    name: 'Filial Centro',
+    code: 'FIL001',
+    address: 'Rua das Flores, 123 - Centro - São Paulo, SP',
+    phone: '(11) 3333-4444',
+    email: 'centro@empresa.com',
+    manager: 'João Silva',
+    isActive: true,
+    color: '#3B82F6',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-446655440101',
+    name: 'Filial Shopping',
+    code: 'FIL002',
+    address: 'Shopping Center, Loja 45 - Vila Madalena - São Paulo, SP',
+    phone: '(11) 5555-6666',
+    email: 'shopping@empresa.com',
+    manager: 'Maria Santos',
+    isActive: true,
+    color: '#10B981',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   }
 ];
 
@@ -182,6 +214,7 @@ const transformMovementFromDB = (dbMovement: any): PointMovement => ({
   id: dbMovement.id,
   customerId: dbMovement.customer_id,
   customerDocument: dbMovement.customer_document,
+  branchId: dbMovement.branch_id,
   type: dbMovement.type,
   points: dbMovement.points,
   description: dbMovement.description,
@@ -199,7 +232,9 @@ const transformBranchFromDB = (dbBranch: any): Branch => ({
   email: dbBranch.email,
   manager: dbBranch.manager,
   isActive: dbBranch.is_active,
-  color: dbBranch.color
+  color: dbBranch.color,
+  created_at: dbBranch.created_at,
+  updated_at: dbBranch.updated_at
 });
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -212,7 +247,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     updateCustomer: updateCustomerDB,
     findCustomerByDocument: findCustomerByDocumentDB,
     findCustomerByEmail: findCustomerByEmailDB,
-    findCustomerByPhone: findCustomerByPhoneDB
+    findCustomerByPhone: findCustomerByPhoneDB,
+    clearCustomers
   } = useCustomers();
 
   const { 
@@ -228,7 +264,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     movements: dbMovements, 
     loading: movementsLoading, 
     error: movementsError,
-    addMovement: addMovementDB
+    addMovement: addMovementDB,
+    clearMovements
   } = usePointMovements();
 
   const { 
@@ -282,7 +319,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   
   const movements: PointMovement[] = dbMovements.map(transformMovementFromDB);
   
-  const branches: Branch[] = dbBranches.map(transformBranchFromDB);
+  // Use mock branches as fallback if database branches are empty
+  const branches: Branch[] = dbBranches.length > 0 ? dbBranches.map(transformBranchFromDB) : mockBranches;
   
   const rewards: Reward[] = dbRewards.map(reward => ({
     id: reward.id,
@@ -346,9 +384,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     validation: dbSettings[0].validation,
     terms: dbSettings[0].terms
   } : {
-    company: { name: '', website: '', address: '' },
+    company: { name: 'Loja Exemplo', website: 'https://lojaexemplo.com', address: 'Rua das Flores, 123 - São Paulo, SP' },
     program: { 
-      name: '', 
+      name: 'Programa Fidelidade', 
       primaryColor: '#3B82F6', 
       secondaryColor: '#10B981', 
       font: 'Inter', 
@@ -485,9 +523,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const addMovement = async (movement: Omit<PointMovement, 'id'>) => {
     try {
+      // Verificar se a filial foi fornecida
+      if (!movement.branchId) {
+        throw new Error('Filial é obrigatória para movimentações');
+      }
+
       await addMovementDB(movement);
     } catch (error) {
       console.error('Erro ao adicionar movimentação:', error);
+      throw error;
     }
   };
 
@@ -671,6 +715,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Função para limpar todos os dados
+  const clearAllData = async () => {
+    try {
+      if (clearCustomers) await clearCustomers();
+      if (clearMovements) await clearMovements();
+      console.log('Todos os dados foram limpos com sucesso');
+    } catch (error) {
+      console.error('Erro ao limpar dados:', error);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       customers,
@@ -700,7 +755,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       deleteLevel,
       addBranch,
       updateBranch,
-      deleteBranch
+      deleteBranch,
+      clearAllData
     }}>
       {children}
     </AppContext.Provider>
