@@ -43,7 +43,7 @@ export const useApp = () => {
 // Mock levels como fallback
 const mockLevels: CustomerLevel[] = [
   {
-    id: 'bronze-level',
+    id: '550e8400-e29b-41d4-a716-446655440000',
     name: 'Bronze',
     color: '#CD7F32',
     icon: 'award',
@@ -62,7 +62,7 @@ const mockLevels: CustomerLevel[] = [
     }
   },
   {
-    id: 'silver-level',
+    id: '550e8400-e29b-41d4-a716-446655440001',
     name: 'Prata',
     color: '#C0C0C0',
     icon: 'star',
@@ -81,7 +81,7 @@ const mockLevels: CustomerLevel[] = [
     }
   },
   {
-    id: 'gold-level',
+    id: '550e8400-e29b-41d4-a716-446655440002',
     name: 'Ouro',
     color: '#FFD700',
     icon: 'crown',
