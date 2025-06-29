@@ -1,3 +1,90 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Estilos para impressão */
+@media print {
+  /* Ocultar elementos que não devem ser impressos */
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Mostrar apenas elementos de impressão */
+  .print-only {
+    display: block !important;
+  }
+  
+  /* Configurações gerais de impressão */
+  body {
+    font-size: 12px;
+    line-height: 1.4;
+    color: black;
+    background: white;
+  }
+  
+  /* Configurações para o comprovante */
+  .receipt-content {
+    page-break-inside: avoid;
+    margin-bottom: 20px;
+    border: 1px solid #000;
+    padding: 15px;
+  }
+  
+  /* Quebra de página entre as vias */
+  .page-break {
+    page-break-before: always;
+    margin: 20px 0;
+    border-top: 2px dashed #000;
+  }
+  
+  /* Remover sombras e bordas desnecessárias */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  /* Garantir que as cores sejam visíveis na impressão */
+  .receipt-content h1,
+  .receipt-content h2,
+  .receipt-content h3 {
+    color: black !important;
+  }
+  
+  /* Ajustar tamanhos para impressão */
+  .receipt-content {
+    font-size: 11px;
+  }
+  
+  .receipt-content h1 {
+    font-size: 18px;
+  }
+  
+  .receipt-content h2 {
+    font-size: 14px;
+  }
+  
+  .receipt-content h3 {
+    font-size: 12px;
+  }
+  
+  /* Garantir que o conteúdo caiba na página */
+  @page {
+    margin: 0.5in;
+    size: A4;
+  }
+  
+  /* Estilo para códigos de cupom */
+  .receipt-content .font-mono {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    border: 1px solid #000;
+    padding: 2px 4px;
+  }
+}
+
+/* Estilos para tela (ocultar elementos de impressão) */
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}

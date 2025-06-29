@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, Filter, Plus, TrendingUp, Gift, Edit, Calendar, QrCode, Receipt } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { PointMovement, Customer } from '../types';
+import RedemptionReceipt from './RedemptionReceipt';
 
 const Movements: React.FC = () => {
   const { movements, customers, addMovement, updateCustomer, findCustomerByDocument } = useApp();
@@ -18,6 +19,13 @@ const Movements: React.FC = () => {
     reference: '',
     couponCode: ''
   });
+
+  // Estados para o comprovante
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState<{
+    customer: Customer;
+    movement: PointMovement;
+  } | null>(null);
 
   const getFullName = (customer: Customer): string => {
     return `${customer.firstName} ${customer.lastName}`.trim();
@@ -139,8 +147,27 @@ const Movements: React.FC = () => {
       const pointsChange = newMovement.type === 'redeem' ? -Math.abs(newMovement.points) : newMovement.points;
       updateCustomer(selectedCustomerForMovement.id, { points: selectedCustomerForMovement.points + pointsChange });
       
+      // Se for um resgate, mostrar o comprovante
+      if (newMovement.type === 'redeem') {
+        const movementWithId: PointMovement = {
+          ...movement,
+          id: Date.now().toString() // Simular o ID que seria gerado
+        };
+        
+        setReceiptData({
+          customer: selectedCustomerForMovement,
+          movement: movementWithId
+        });
+        setShowReceiptModal(true);
+      }
+      
       handleCloseMovementModal();
     }
+  };
+
+  const handleCloseReceiptModal = () => {
+    setShowReceiptModal(false);
+    setReceiptData(null);
   };
 
   const getMovementIcon = (type: string) => {
@@ -486,6 +513,15 @@ const Movements: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Redemption Receipt Modal */}
+      {showReceiptModal && receiptData && (
+        <RedemptionReceipt
+          customer={receiptData.customer}
+          movement={receiptData.movement}
+          onClose={handleCloseReceiptModal}
+        />
       )}
     </div>
   );
