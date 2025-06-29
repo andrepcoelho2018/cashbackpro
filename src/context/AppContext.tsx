@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { Customer, CustomerLevel, PointMovement, Reward, Campaign, Referral, ReferralType, Settings, CustomerValidation } from '../types';
+import { useSupabaseTable, useCustomers, usePointMovements } from '../hooks/useSupabase';
 
 interface AppContextType {
   customers: Customer[];
@@ -10,6 +11,8 @@ interface AppContextType {
   referrals: Referral[];
   referralTypes: ReferralType[];
   settings: Settings;
+  loading: boolean;
+  error: string | null;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
   addMovement: (movement: Omit<PointMovement, 'id'>) => void;
   updateSettings: (settings: Partial<Settings>) => void;
@@ -35,294 +38,6 @@ export const useApp = () => {
     throw new Error('useApp must be used within an AppProvider');
   }
   return context;
-};
-
-const mockLevels: CustomerLevel[] = [
-  {
-    id: '1',
-    name: 'Bronze',
-    color: '#CD7F32',
-    icon: 'award',
-    order: 1,
-    requirements: { minPoints: 0 },
-    benefits: {
-      pointsMultiplier: 1,
-      referralBonus: 1,
-      freeShipping: false,
-      exclusiveEvents: false,
-      customRewards: []
-    }
-  },
-  {
-    id: '2',
-    name: 'Prata',
-    color: '#C0C0C0',
-    icon: 'star',
-    order: 2,
-    requirements: { minPoints: 1000 },
-    benefits: {
-      pointsMultiplier: 1.5,
-      referralBonus: 1.5,
-      freeShipping: false,
-      exclusiveEvents: true,
-      customRewards: ['10% desconto aniversário']
-    }
-  },
-  {
-    id: '3',
-    name: 'Ouro',
-    color: '#FFD700',
-    icon: 'crown',
-    order: 3,
-    requirements: { minPoints: 2500 },
-    benefits: {
-      pointsMultiplier: 2,
-      referralBonus: 2,
-      freeShipping: true,
-      exclusiveEvents: true,
-      customRewards: ['Frete grátis', 'Eventos exclusivos']
-    }
-  }
-];
-
-const mockCustomers: Customer[] = [
-  {
-    id: '1',
-    firstName: 'Maria',
-    lastName: 'Silva',
-    email: 'maria@email.com',
-    phone: '+55 11 99999-9999',
-    document: '123.456.789-00',
-    points: 1250,
-    level: mockLevels[1],
-    status: 'active',
-    registrationDate: '2024-01-15',
-    lastPurchase: '2024-01-20',
-    emailVerified: true,
-    phoneVerified: true,
-    documentVerified: true
-  },
-  {
-    id: '2',
-    firstName: 'João',
-    lastName: 'Santos',
-    email: 'joao@email.com',
-    phone: '+55 11 88888-8888',
-    document: '987.654.321-00',
-    points: 3500,
-    level: mockLevels[2],
-    status: 'active',
-    registrationDate: '2023-12-10',
-    lastPurchase: '2024-01-18',
-    emailVerified: true,
-    phoneVerified: false,
-    documentVerified: true
-  },
-  {
-    id: '3',
-    firstName: 'Ana',
-    lastName: 'Costa',
-    email: 'ana@email.com',
-    phone: '+55 11 77777-7777',
-    document: '456.789.123-00',
-    points: 750,
-    level: mockLevels[0],
-    status: 'active',
-    registrationDate: '2024-01-10',
-    emailVerified: false,
-    phoneVerified: true,
-    documentVerified: true
-  }
-];
-
-const mockMovements: PointMovement[] = [
-  {
-    id: '1',
-    customerId: '1',
-    customerDocument: '123.456.789-00',
-    type: 'earn',
-    points: 250,
-    description: 'Compra no valor de R$ 250,00',
-    date: '2024-01-20',
-    reference: 'PED-001'
-  },
-  {
-    id: '2',
-    customerId: '1',
-    customerDocument: '123.456.789-00',
-    type: 'redeem',
-    points: -100,
-    description: 'Resgate: Desconto de R$ 10,00',
-    date: '2024-01-19',
-    reference: 'RES-001',
-    couponCode: 'DESC10-ABCD'
-  }
-];
-
-const mockRewards: Reward[] = [
-  {
-    id: '1',
-    name: 'Desconto R$ 10',
-    description: 'Desconto de R$ 10,00 em compras acima de R$ 50,00',
-    pointsCost: 100,
-    type: 'discount',
-    value: 10,
-    isActive: true,
-    expirationDays: 30,
-    conditions: {
-      requiresVerification: true
-    }
-  },
-  {
-    id: '2',
-    name: 'Frete Grátis',
-    description: 'Frete grátis para qualquer compra',
-    pointsCost: 200,
-    type: 'service',
-    value: 0,
-    isActive: true,
-    expirationDays: 15,
-    conditions: {
-      minLevel: '2',
-      maxUsesPerCustomer: 3
-    }
-  }
-];
-
-const mockCampaigns: Campaign[] = [
-  {
-    id: '1',
-    name: 'Pontos Dobrados - Janeiro',
-    type: 'period',
-    multiplier: 2,
-    startDate: '2024-01-01',
-    endDate: '2024-01-31',
-    isActive: true,
-    widget: {
-      title: 'Pontos em Dobro!',
-      description: 'Ganhe pontos em dobro em Janeiro',
-      actionButton: {
-        text: 'Comprar Agora',
-        url: '/loja'
-      }
-    }
-  }
-];
-
-const mockReferralTypes: ReferralType[] = [
-  {
-    id: '1',
-    name: 'Indicação Básica',
-    description: 'Indicação padrão para novos clientes',
-    icon: 'user-plus',
-    color: '#3B82F6',
-    isActive: true,
-    methods: ['email', 'whatsapp', 'sms'],
-    referrerReward: {
-      type: 'points',
-      value: 500,
-      description: '500 pontos por indicação validada'
-    },
-    referredReward: {
-      type: 'points',
-      value: 250,
-      description: '250 pontos de boas-vindas'
-    },
-    conditions: {
-      requiresFirstPurchase: true,
-      validityDays: 30
-    }
-  },
-  {
-    id: '2',
-    name: 'Indicação Premium',
-    description: 'Para clientes VIP com recompensas maiores',
-    icon: 'crown',
-    color: '#FFD700',
-    isActive: true,
-    methods: ['email', 'whatsapp', 'qrcode'],
-    referrerReward: {
-      type: 'fixed',
-      value: 50,
-      description: 'R$ 50,00 em crédito na loja'
-    },
-    referredReward: {
-      type: 'percentage',
-      value: 20,
-      description: '20% de desconto na primeira compra'
-    },
-    conditions: {
-      minPurchaseValue: 200,
-      requiresFirstPurchase: true,
-      validityDays: 60,
-      maxReferrals: 5
-    }
-  }
-];
-
-const mockReferrals: Referral[] = [
-  {
-    id: '1',
-    referrerId: '1',
-    referrerDocument: '123.456.789-00',
-    referredId: '2',
-    referredDocument: '987.654.321-00',
-    referredIdentifier: 'joao@email.com',
-    referredIdentifierType: 'email',
-    referralTypeId: '1',
-    status: 'validated',
-    date: '2024-01-10',
-    method: 'email',
-    validatedDate: '2024-01-15',
-    purchaseValue: 150
-  },
-  {
-    id: '2',
-    referrerId: '1',
-    referrerDocument: '123.456.789-00',
-    referredId: '3',
-    referredDocument: '456.789.123-00',
-    referredIdentifier: '+55 11 77777-7777',
-    referredIdentifierType: 'phone',
-    referralTypeId: '2',
-    status: 'pending',
-    date: '2024-01-18',
-    method: 'whatsapp'
-  }
-];
-
-const mockSettings: Settings = {
-  company: {
-    name: 'Loja Exemplo',
-    website: 'https://lojaexemplo.com',
-    address: 'Rua das Flores, 123 - São Paulo, SP'
-  },
-  program: {
-    name: 'Programa Fidelidade',
-    primaryColor: '#3B82F6',
-    secondaryColor: '#10B981',
-    font: 'Inter',
-    pointsPerReal: 1,
-    minPurchaseValue: 50,
-    pointsExpiration: {
-      enabled: true,
-      days: 365,
-      notifyDaysBefore: 30
-    }
-  },
-  notifications: {
-    email: true,
-    whatsapp: true,
-    sms: false
-  },
-  validation: {
-    requireCpfValidation: true,
-    requireEmailVerification: false,
-    requirePhoneVerification: false,
-    allowDuplicateEmail: false,
-    allowDuplicatePhone: true
-  },
-  terms: 'Termos e condições do programa de fidelidade...'
 };
 
 // Função para validar CPF
@@ -357,39 +72,233 @@ const formatCPF = (cpf: string): string => {
   return cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 };
 
-// Função para obter nome completo
-const getFullName = (customer: Customer): string => {
-  return `${customer.firstName} ${customer.lastName}`.trim();
-};
+// Função para transformar dados do Supabase para o formato da aplicação
+const transformCustomerFromDB = (dbCustomer: any): Customer => ({
+  id: dbCustomer.id,
+  firstName: dbCustomer.first_name,
+  lastName: dbCustomer.last_name,
+  email: dbCustomer.email,
+  phone: dbCustomer.phone,
+  document: dbCustomer.document,
+  points: dbCustomer.points,
+  level: transformLevelFromDB(dbCustomer.level),
+  status: dbCustomer.status,
+  registrationDate: dbCustomer.registration_date,
+  lastPurchase: dbCustomer.last_purchase,
+  address: dbCustomer.address,
+  preferences: dbCustomer.preferences,
+  emailVerified: dbCustomer.email_verified,
+  phoneVerified: dbCustomer.phone_verified,
+  documentVerified: dbCustomer.document_verified
+});
+
+const transformLevelFromDB = (dbLevel: any): CustomerLevel => ({
+  id: dbLevel.id,
+  name: dbLevel.name,
+  color: dbLevel.color,
+  icon: dbLevel.icon,
+  order: dbLevel.order_position,
+  requirements: {
+    minPoints: dbLevel.min_points,
+    minPurchaseValue: dbLevel.min_purchase_value,
+    timeframe: dbLevel.timeframe_days
+  },
+  benefits: {
+    pointsMultiplier: dbLevel.points_multiplier,
+    referralBonus: dbLevel.referral_bonus,
+    freeShipping: dbLevel.free_shipping,
+    exclusiveEvents: dbLevel.exclusive_events,
+    customRewards: dbLevel.custom_rewards || []
+  }
+});
+
+const transformMovementFromDB = (dbMovement: any): PointMovement => ({
+  id: dbMovement.id,
+  customerId: dbMovement.customer_id,
+  customerDocument: dbMovement.customer_document,
+  type: dbMovement.type,
+  points: dbMovement.points,
+  description: dbMovement.description,
+  date: dbMovement.date,
+  reference: dbMovement.reference,
+  couponCode: dbMovement.coupon_code
+});
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
-  const [levels, setLevels] = useState<CustomerLevel[]>(mockLevels);
-  const [movements, setMovements] = useState<PointMovement[]>(mockMovements);
-  const [rewards] = useState<Reward[]>(mockRewards);
-  const [campaigns] = useState<Campaign[]>(mockCampaigns);
-  const [referrals] = useState<Referral[]>(mockReferrals);
-  const [referralTypes, setReferralTypes] = useState<ReferralType[]>(mockReferralTypes);
-  const [settings, setSettings] = useState<Settings>(mockSettings);
+  // Hooks do Supabase
+  const { 
+    customers: dbCustomers, 
+    loading: customersLoading, 
+    error: customersError,
+    addCustomer: addCustomerDB,
+    updateCustomer: updateCustomerDB,
+    findCustomerByDocument: findCustomerByDocumentDB,
+    findCustomerByEmail: findCustomerByEmailDB,
+    findCustomerByPhone: findCustomerByPhoneDB
+  } = useCustomers();
 
+  const { 
+    data: dbLevels, 
+    loading: levelsLoading, 
+    error: levelsError,
+    insert: insertLevel,
+    update: updateLevelDB,
+    remove: removeLevel
+  } = useSupabaseTable('customer_levels');
+
+  const { 
+    movements: dbMovements, 
+    loading: movementsLoading, 
+    error: movementsError,
+    addMovement: addMovementDB
+  } = usePointMovements();
+
+  const { 
+    data: dbRewards, 
+    loading: rewardsLoading, 
+    error: rewardsError 
+  } = useSupabaseTable('rewards');
+
+  const { 
+    data: dbCampaigns, 
+    loading: campaignsLoading, 
+    error: campaignsError 
+  } = useSupabaseTable('campaigns');
+
+  const { 
+    data: dbReferrals, 
+    loading: referralsLoading, 
+    error: referralsError 
+  } = useSupabaseTable('referrals');
+
+  const { 
+    data: dbReferralTypes, 
+    loading: referralTypesLoading, 
+    error: referralTypesError,
+    insert: insertReferralType,
+    update: updateReferralTypeDB,
+    remove: removeReferralType
+  } = useSupabaseTable('referral_types');
+
+  const { 
+    data: dbSettings, 
+    loading: settingsLoading, 
+    error: settingsError,
+    update: updateSettingsDB
+  } = useSupabaseTable('settings');
+
+  // Transformar dados do banco para o formato da aplicação
+  const customers: Customer[] = dbCustomers.map(transformCustomerFromDB);
+  const levels: CustomerLevel[] = dbLevels.map(transformLevelFromDB);
+  const movements: PointMovement[] = dbMovements.map(transformMovementFromDB);
+  
+  const rewards: Reward[] = dbRewards.map(reward => ({
+    id: reward.id,
+    name: reward.name,
+    description: reward.description,
+    pointsCost: reward.points_cost,
+    type: reward.type,
+    value: reward.value,
+    isActive: reward.is_active,
+    expirationDays: reward.expiration_days,
+    image: reward.image_url,
+    conditions: reward.conditions
+  }));
+
+  const campaigns: Campaign[] = dbCampaigns.map(campaign => ({
+    id: campaign.id,
+    name: campaign.name,
+    type: campaign.type,
+    multiplier: campaign.multiplier,
+    startDate: campaign.start_date,
+    endDate: campaign.end_date,
+    products: campaign.products,
+    isActive: campaign.is_active,
+    widget: campaign.widget
+  }));
+
+  const referrals: Referral[] = dbReferrals.map(referral => ({
+    id: referral.id,
+    referrerId: referral.referrer_id,
+    referrerDocument: referral.referrer_document,
+    referredId: referral.referred_id || '',
+    referredDocument: referral.referred_document || '',
+    referredIdentifier: referral.referred_identifier,
+    referredIdentifierType: referral.referred_identifier_type,
+    referralTypeId: referral.referral_type_id,
+    status: referral.status,
+    date: referral.date,
+    method: referral.method,
+    validatedDate: referral.validated_date,
+    rejectedReason: referral.rejected_reason,
+    purchaseValue: referral.purchase_value
+  }));
+
+  const referralTypes: ReferralType[] = dbReferralTypes.map(type => ({
+    id: type.id,
+    name: type.name,
+    description: type.description,
+    icon: type.icon,
+    color: type.color,
+    isActive: type.is_active,
+    methods: type.methods as any,
+    referrerReward: type.referrer_reward,
+    referredReward: type.referred_reward,
+    conditions: type.conditions
+  }));
+
+  const settings: Settings = dbSettings[0] ? {
+    company: dbSettings[0].company,
+    program: dbSettings[0].program,
+    notifications: dbSettings[0].notifications,
+    validation: dbSettings[0].validation,
+    terms: dbSettings[0].terms
+  } : {
+    company: { name: '', website: '', address: '' },
+    program: { 
+      name: '', 
+      primaryColor: '#3B82F6', 
+      secondaryColor: '#10B981', 
+      font: 'Inter', 
+      pointsPerReal: 1, 
+      minPurchaseValue: 50,
+      pointsExpiration: { enabled: true, days: 365, notifyDaysBefore: 30 }
+    },
+    notifications: { email: true, whatsapp: true, sms: false },
+    validation: { 
+      requireCpfValidation: true, 
+      requireEmailVerification: false, 
+      requirePhoneVerification: false, 
+      allowDuplicateEmail: false, 
+      allowDuplicatePhone: true 
+    },
+    terms: ''
+  };
+
+  // Estado de loading geral
+  const loading = customersLoading || levelsLoading || movementsLoading || 
+                 rewardsLoading || campaignsLoading || referralsLoading || 
+                 referralTypesLoading || settingsLoading;
+
+  // Erro geral
+  const error = customersError || levelsError || movementsError || 
+               rewardsError || campaignsError || referralsError || 
+               referralTypesError || settingsError;
+
+  // Funções de validação
   const findCustomerByDocument = (document: string): Customer | undefined => {
-    const cleanDocument = document.replace(/[^\d]/g, '');
-    return customers.find(customer => 
-      customer.document.replace(/[^\d]/g, '') === cleanDocument
-    );
+    const dbCustomer = findCustomerByDocumentDB(document);
+    return dbCustomer ? transformCustomerFromDB(dbCustomer) : undefined;
   };
 
   const findCustomerByEmail = (email: string): Customer | undefined => {
-    return customers.find(customer => 
-      customer.email.toLowerCase() === email.toLowerCase()
-    );
+    const dbCustomer = findCustomerByEmailDB(email);
+    return dbCustomer ? transformCustomerFromDB(dbCustomer) : undefined;
   };
 
   const findCustomerByPhone = (phone: string): Customer | undefined => {
-    const cleanPhone = phone.replace(/[^\d]/g, '');
-    return customers.find(customer => 
-      customer.phone.replace(/[^\d]/g, '') === cleanPhone
-    );
+    const dbCustomer = findCustomerByPhoneDB(phone);
+    return dbCustomer ? transformCustomerFromDB(dbCustomer) : undefined;
   };
 
   const validateCustomer = (document: string, email?: string, phone?: string): CustomerValidation => {
@@ -446,111 +355,175 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   };
 
-  const addCustomer = (customerData: Omit<Customer, 'id'>): Customer | null => {
+  // Funções CRUD
+  const addCustomer = async (customerData: Omit<Customer, 'id'>): Promise<Customer | null> => {
     const validation = validateCustomer(customerData.document, customerData.email, customerData.phone);
     
     if (!validation.isValid) {
       return null;
     }
 
-    const newCustomer: Customer = {
-      ...customerData,
-      id: Date.now().toString(),
-      document: formatCPF(customerData.document),
-      emailVerified: false,
-      phoneVerified: false,
-      documentVerified: settings.validation.requireCpfValidation
-    };
-
-    setCustomers(prev => [...prev, newCustomer]);
-    return newCustomer;
-  };
-
-  const updateCustomer = (id: string, updatedCustomer: Partial<Customer>) => {
-    setCustomers(prev => 
-      prev.map(customer => 
-        customer.id === id ? { ...customer, ...updatedCustomer } : customer
-      )
-    );
-  };
-
-  const addMovement = (movement: Omit<PointMovement, 'id'>) => {
-    const customer = customers.find(c => c.id === movement.customerId);
-    const newMovement: PointMovement = {
-      ...movement,
-      id: Date.now().toString(),
-      customerDocument: customer?.document || ''
-    };
-    setMovements(prev => [newMovement, ...prev]);
-  };
-
-  const updateSettings = (newSettings: Partial<Settings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
-  };
-
-  const addReferralType = (referralType: Omit<ReferralType, 'id'>) => {
-    const newReferralType: ReferralType = {
-      ...referralType,
-      id: Date.now().toString()
-    };
-    setReferralTypes(prev => [...prev, newReferralType]);
-  };
-
-  const updateReferralType = (id: string, updatedReferralType: Partial<ReferralType>) => {
-    setReferralTypes(prev =>
-      prev.map(type =>
-        type.id === id ? { ...type, ...updatedReferralType } : type
-      )
-    );
-  };
-
-  const deleteReferralType = (id: string) => {
-    setReferralTypes(prev => prev.filter(type => type.id !== id));
-  };
-
-  // Funções para gerenciar níveis
-  const addLevel = (levelData: Omit<CustomerLevel, 'id'>) => {
-    const newLevel: CustomerLevel = {
-      ...levelData,
-      id: Date.now().toString()
-    };
-    setLevels(prev => [...prev, newLevel].sort((a, b) => a.order - b.order));
-  };
-
-  const updateLevel = (id: string, updatedLevel: Partial<CustomerLevel>) => {
-    setLevels(prev => 
-      prev.map(level => 
-        level.id === id ? { ...level, ...updatedLevel } : level
-      ).sort((a, b) => a.order - b.order)
-    );
-
-    // Atualizar clientes que possuem este nível
-    const updatedLevelData = levels.find(l => l.id === id);
-    if (updatedLevelData) {
-      const finalLevel = { ...updatedLevelData, ...updatedLevel };
-      setCustomers(prev =>
-        prev.map(customer =>
-          customer.level.id === id ? { ...customer, level: finalLevel } : customer
-        )
-      );
+    try {
+      const dbCustomer = await addCustomerDB({
+        ...customerData,
+        document: formatCPF(customerData.document)
+      });
+      return transformCustomerFromDB(dbCustomer);
+    } catch (error) {
+      console.error('Erro ao adicionar cliente:', error);
+      return null;
     }
   };
 
-  const deleteLevel = (id: string) => {
-    // Não permitir deletar se há clientes neste nível
+  const updateCustomer = async (id: string, updatedCustomer: Partial<Customer>) => {
+    try {
+      await updateCustomerDB(id, updatedCustomer);
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error);
+    }
+  };
+
+  const addMovement = async (movement: Omit<PointMovement, 'id'>) => {
+    try {
+      await addMovementDB(movement);
+    } catch (error) {
+      console.error('Erro ao adicionar movimentação:', error);
+    }
+  };
+
+  const updateSettings = async (newSettings: Partial<Settings>) => {
+    try {
+      if (dbSettings[0]) {
+        await updateSettingsDB(dbSettings[0].id, {
+          company: { ...settings.company, ...newSettings.company },
+          program: { ...settings.program, ...newSettings.program },
+          notifications: { ...settings.notifications, ...newSettings.notifications },
+          validation: { ...settings.validation, ...newSettings.validation },
+          terms: newSettings.terms || settings.terms
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar configurações:', error);
+    }
+  };
+
+  // Funções para níveis
+  const addLevel = async (levelData: Omit<CustomerLevel, 'id'>) => {
+    try {
+      await insertLevel({
+        name: levelData.name,
+        color: levelData.color,
+        icon: levelData.icon,
+        order_position: levelData.order,
+        min_points: levelData.requirements.minPoints,
+        min_purchase_value: levelData.requirements.minPurchaseValue,
+        timeframe_days: levelData.requirements.timeframe,
+        points_multiplier: levelData.benefits.pointsMultiplier,
+        referral_bonus: levelData.benefits.referralBonus,
+        free_shipping: levelData.benefits.freeShipping,
+        exclusive_events: levelData.benefits.exclusiveEvents,
+        custom_rewards: levelData.benefits.customRewards
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar nível:', error);
+    }
+  };
+
+  const updateLevel = async (id: string, updatedLevel: Partial<CustomerLevel>) => {
+    try {
+      const updateData: any = {};
+      
+      if (updatedLevel.name) updateData.name = updatedLevel.name;
+      if (updatedLevel.color) updateData.color = updatedLevel.color;
+      if (updatedLevel.icon) updateData.icon = updatedLevel.icon;
+      if (updatedLevel.order) updateData.order_position = updatedLevel.order;
+      
+      if (updatedLevel.requirements) {
+        if (updatedLevel.requirements.minPoints !== undefined) updateData.min_points = updatedLevel.requirements.minPoints;
+        if (updatedLevel.requirements.minPurchaseValue !== undefined) updateData.min_purchase_value = updatedLevel.requirements.minPurchaseValue;
+        if (updatedLevel.requirements.timeframe !== undefined) updateData.timeframe_days = updatedLevel.requirements.timeframe;
+      }
+      
+      if (updatedLevel.benefits) {
+        if (updatedLevel.benefits.pointsMultiplier !== undefined) updateData.points_multiplier = updatedLevel.benefits.pointsMultiplier;
+        if (updatedLevel.benefits.referralBonus !== undefined) updateData.referral_bonus = updatedLevel.benefits.referralBonus;
+        if (updatedLevel.benefits.freeShipping !== undefined) updateData.free_shipping = updatedLevel.benefits.freeShipping;
+        if (updatedLevel.benefits.exclusiveEvents !== undefined) updateData.exclusive_events = updatedLevel.benefits.exclusiveEvents;
+        if (updatedLevel.benefits.customRewards !== undefined) updateData.custom_rewards = updatedLevel.benefits.customRewards;
+      }
+
+      await updateLevelDB(id, updateData);
+    } catch (error) {
+      console.error('Erro ao atualizar nível:', error);
+    }
+  };
+
+  const deleteLevel = async (id: string) => {
+    // Verificar se há clientes neste nível
     const customersWithLevel = customers.filter(customer => customer.level.id === id);
     if (customersWithLevel.length > 0) {
       alert(`Não é possível deletar este nível pois há ${customersWithLevel.length} cliente(s) associado(s) a ele.`);
       return;
     }
 
-    // Não permitir deletar se é o último nível
+    // Verificar se é o último nível
     if (levels.length <= 1) {
       alert('Não é possível deletar o último nível. Deve haver pelo menos um nível ativo.');
       return;
     }
 
-    setLevels(prev => prev.filter(level => level.id !== id));
+    try {
+      await removeLevel(id);
+    } catch (error) {
+      console.error('Erro ao deletar nível:', error);
+    }
+  };
+
+  // Funções para tipos de indicação
+  const addReferralType = async (referralType: Omit<ReferralType, 'id'>) => {
+    try {
+      await insertReferralType({
+        name: referralType.name,
+        description: referralType.description,
+        icon: referralType.icon,
+        color: referralType.color,
+        is_active: referralType.isActive,
+        methods: referralType.methods,
+        referrer_reward: referralType.referrerReward,
+        referred_reward: referralType.referredReward,
+        conditions: referralType.conditions
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar tipo de indicação:', error);
+    }
+  };
+
+  const updateReferralType = async (id: string, updatedReferralType: Partial<ReferralType>) => {
+    try {
+      const updateData: any = {};
+      
+      if (updatedReferralType.name) updateData.name = updatedReferralType.name;
+      if (updatedReferralType.description) updateData.description = updatedReferralType.description;
+      if (updatedReferralType.icon) updateData.icon = updatedReferralType.icon;
+      if (updatedReferralType.color) updateData.color = updatedReferralType.color;
+      if (updatedReferralType.isActive !== undefined) updateData.is_active = updatedReferralType.isActive;
+      if (updatedReferralType.methods) updateData.methods = updatedReferralType.methods;
+      if (updatedReferralType.referrerReward) updateData.referrer_reward = updatedReferralType.referrerReward;
+      if (updatedReferralType.referredReward) updateData.referred_reward = updatedReferralType.referredReward;
+      if (updatedReferralType.conditions) updateData.conditions = updatedReferralType.conditions;
+
+      await updateReferralTypeDB(id, updateData);
+    } catch (error) {
+      console.error('Erro ao atualizar tipo de indicação:', error);
+    }
+  };
+
+  const deleteReferralType = async (id: string) => {
+    try {
+      await removeReferralType(id);
+    } catch (error) {
+      console.error('Erro ao deletar tipo de indicação:', error);
+    }
   };
 
   return (
@@ -563,6 +536,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       referrals,
       referralTypes,
       settings,
+      loading,
+      error,
       updateCustomer,
       addMovement,
       updateSettings,

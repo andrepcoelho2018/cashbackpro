@@ -10,6 +10,7 @@ import Referrals from './components/Referrals';
 import Communication from './components/Communication';
 import Objectives from './components/Objectives';
 import Settings from './components/Settings';
+import LoadingScreen from './components/LoadingScreen';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -42,6 +43,7 @@ function App() {
   return (
     <AppProvider>
       <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
+        <LoadingScreen />
         {renderPage()}
       </Layout>
     </AppProvider>
