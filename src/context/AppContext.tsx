@@ -14,6 +14,7 @@ interface AppContextType {
   loading: boolean;
   error: string | null;
   addMovement: (movement: Omit<PointMovement, 'id'>) => void;
+  addReferral: (referral: Omit<Referral, 'id'>) => void;
   updateSettings: (settings: Partial<Settings>) => void;
   addReferralType: (referralType: Omit<ReferralType, 'id'>) => void;
   updateReferralType: (id: string, referralType: Partial<ReferralType>) => void;
@@ -117,7 +118,8 @@ const AppProviderInternal: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { 
     data: dbReferrals, 
     loading: referralsLoading, 
-    error: referralsError 
+    error: referralsError,
+    insert: insertReferral
   } = useSupabaseTable('referrals');
 
   const { 
@@ -251,6 +253,29 @@ const AppProviderInternal: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const addReferral = async (referral: Omit<Referral, 'id'>) => {
+    try {
+      await insertReferral({
+        referrer_id: referral.referrerId,
+        referrer_document: referral.referrerDocument,
+        referred_id: referral.referredId || null,
+        referred_document: referral.referredDocument || null,
+        referred_identifier: referral.referredIdentifier,
+        referred_identifier_type: referral.referredIdentifierType,
+        referral_type_id: referral.referralTypeId,
+        status: referral.status,
+        date: referral.date,
+        method: referral.method,
+        validated_date: referral.validatedDate || null,
+        rejected_reason: referral.rejectedReason || null,
+        purchase_value: referral.purchaseValue || null
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar indicação:', error);
+      throw error;
+    }
+  };
+
   const updateSettings = async (newSettings: Partial<Settings>) => {
     try {
       if (dbSettings[0]) {
@@ -379,6 +404,7 @@ const AppProviderInternal: React.FC<{ children: ReactNode }> = ({ children }) =>
       loading,
       error,
       addMovement,
+      addReferral,
       updateSettings,
       addReferralType,
       updateReferralType,
