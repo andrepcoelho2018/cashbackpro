@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Search, Filter, Plus, TrendingUp, Gift, Edit, Calendar, QrCode, Receipt } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useCustomerContext } from '../context/CustomerContext';
 import { PointMovement, Customer, Branch } from '../types';
 import RedemptionReceipt from './RedemptionReceipt';
 import { generateUniqueCouponCode } from '../utils/couponGenerator';
 
 const Movements: React.FC = () => {
-  const { movements, customers, branches, addMovement, updateCustomer, findCustomerByDocument } = useApp();
+  const { movements, branches, addMovement } = useApp();
+  const { customers, updateCustomer, findCustomerByDocument } = useCustomerContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'earn' | 'redeem' | 'admin_adjust'>('all');
   const [showMovementModal, setShowMovementModal] = useState(false);

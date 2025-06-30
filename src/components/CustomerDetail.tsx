@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Star, Edit, Gift, TrendingUp, Users, Calendar, MapPin, Phone, Mail, FileText } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useCustomerContext } from '../context/CustomerContext';
 import { Customer, PointMovement } from '../types';
 import PhoneInput from './PhoneInput';
 
@@ -10,7 +11,8 @@ interface CustomerDetailProps {
 }
 
 const CustomerDetail: React.FC<CustomerDetailProps> = ({ customer, onBack }) => {
-  const { movements, levels, updateCustomer, addMovement } = useApp();
+  const { movements, levels, addMovement } = useApp();
+  const { updateCustomer } = useCustomerContext();
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState(customer);
   const [pointsToAdd, setPointsToAdd] = useState(0);

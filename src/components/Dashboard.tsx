@@ -1,6 +1,7 @@
 import React from 'react';
 import { Users, TrendingUp, Gift, UserPlus, Star, Award, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useCustomerContext } from '../context/CustomerContext';
 
 interface DashboardProps {
   onPageChange: (page: string) => void;
@@ -8,12 +9,12 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ onPageChange }) => {
   const { 
-    customers = [], 
     movements = [], 
     rewards = [], 
     referrals = [], 
     clearAllData 
   } = useApp();
+  const { customers = [] } = useCustomerContext();
 
   // Função para obter nome completo
   const getFullName = (customer: any): string => {

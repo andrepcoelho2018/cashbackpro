@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Search, Filter, Plus, Edit, MoreVertical, Star, Clock, Gift, TrendingUp, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useCustomerContext } from '../context/CustomerContext';
 import { Customer } from '../types';
 import CustomerDetail from './CustomerDetail';
 import PhoneInput from './PhoneInput';
 
 const Customers: React.FC = () => {
-  const { customers, validateCustomer, addCustomer, levels } = useApp();
+  const { levels } = useApp();
+  const { customers, validateCustomer, addCustomer } = useCustomerContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { UserPlus, Mail, MessageSquare, Smartphone, QrCode, Check, X, Clock, Gift, Plus, Edit, Trash2, Crown, Heart, Building, Eye, EyeOff, Search, Filter, Star, Award, Trophy } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useCustomerContext } from '../context/CustomerContext';
 import { ReferralType, Customer, Referral } from '../types';
 import PhoneInput from './PhoneInput';
 
 const Referrals: React.FC = () => {
-  const { referrals, referralTypes, customers, addReferralType, updateReferralType, deleteReferralType, addReferral, findCustomerByDocument } = useApp();
+  const { referrals, referralTypes, addReferralType, updateReferralType, deleteReferralType, addReferral } = useApp();
+  const { customers, findCustomerByDocument } = useCustomerContext();
   const [activeTab, setActiveTab] = useState<'list' | 'types' | 'config'>('list');
   const [showModal, setShowModal] = useState(false); // Para Adicionar/Editar Tipo de Indicação
   const [showAddReferralModal, setShowAddReferralModal] = useState(false); // Para Adicionar Nova Indicação
