@@ -86,6 +86,9 @@ const Movements: React.FC = () => {
 
   const handleOpenAddPointsModal = () => {
     setModalActionType('add_points');
+    setSearchCustomerDocument('');
+    setSelectedCustomerForMovement(null);
+    setSelectedBranchForMovement(null);
     setNewMovement({
       type: 'earn',
       points: 0,
@@ -93,14 +96,15 @@ const Movements: React.FC = () => {
       reference: '',
       couponCode: ''
     });
-    resetMovementForm();
     setShowMovementModal(true);
   };
 
   const handleOpenRedeemOfflineModal = () => {
     setModalActionType('redeem_offline');
-    // Generate unique coupon code for offline redemption
     const couponCode = generateUniqueCouponCode('offline');
+    setSearchCustomerDocument('');
+    setSelectedCustomerForMovement(null);
+    setSelectedBranchForMovement(null);
     setNewMovement({
       type: 'redeem',
       points: 100,
@@ -108,14 +112,15 @@ const Movements: React.FC = () => {
       reference: '',
       couponCode: couponCode
     });
-    resetMovementForm();
     setShowMovementModal(true);
   };
 
   const handleOpenRedeemOnlineModal = () => {
     setModalActionType('redeem_online');
-    // Generate unique coupon code for online redemption
     const couponCode = generateUniqueCouponCode('online');
+    setSearchCustomerDocument('');
+    setSelectedCustomerForMovement(null);
+    setSelectedBranchForMovement(null);
     setNewMovement({
       type: 'redeem',
       points: 100,
@@ -123,7 +128,6 @@ const Movements: React.FC = () => {
       reference: '',
       couponCode: couponCode
     });
-    resetMovementForm();
     setShowMovementModal(true);
   };
 
