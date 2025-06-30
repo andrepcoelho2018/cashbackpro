@@ -2,7 +2,11 @@ import React from 'react';
 import { Users, TrendingUp, Gift, UserPlus, Star, Award, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onPageChange: (page: string) => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onPageChange }) => {
   const { customers, movements, rewards, referrals, clearAllData } = useApp();
 
   // Função para obter nome completo
@@ -191,15 +195,24 @@ const Dashboard: React.FC = () => {
           Ações Rápidas
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+          <button 
+            onClick={() => onPageChange('customers')}
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+          >
             <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600">Adicionar Cliente</p>
           </button>
-          <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
+          <button 
+            onClick={() => onPageChange('rewards')}
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+          >
             <Gift className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600">Nova Recompensa</p>
           </button>
-          <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
+          <button 
+            onClick={() => onPageChange('movements')}
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
+          >
             <TrendingUp className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600">Registrar Pontos</p>
           </button>

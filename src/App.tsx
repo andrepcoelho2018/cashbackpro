@@ -19,7 +19,7 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onPageChange={setCurrentPage} />;
       case 'customers':
         return <Customers />;
       case 'branches':
@@ -39,7 +39,7 @@ function App() {
       case 'settings':
         return <Settings />;
       default:
-        return <Dashboard />;
+        return <Dashboard onPageChange={setCurrentPage} />;
     }
   };
 
