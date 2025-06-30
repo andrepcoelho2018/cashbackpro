@@ -1,14 +1,18 @@
 // Utility functions for generating unique coupon codes
 
 /**
- * Generates a cryptographically secure random string
+ * Generates a random string using Math.random()
  */
 function generateSecureRandomString(length: number): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const array = new Uint8Array(length);
-  crypto.getRandomValues(array);
+  let result = '';
   
-  return Array.from(array, byte => chars[byte % chars.length]).join('');
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * chars.length);
+    result += chars[randomIndex];
+  }
+  
+  return result;
 }
 
 /**
