@@ -402,14 +402,3 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     </CustomerProvider>
   );
 };
-
-// Re-export customer context functions for backward compatibility
-export const useCustomers = () => {
-  const customerContext = useCustomerContext();
-  const appContext = useApp();
-  
-  return {
-    ...customerContext,
-    ...appContext
-  };
-};
