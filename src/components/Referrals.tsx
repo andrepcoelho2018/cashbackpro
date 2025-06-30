@@ -1,826 +1,790 @@
-import React, { useState } from 'react';
-import { UserPlus, Mail, MessageSquare, Smartphone, QrCode, Check, X, Clock, Gift, Plus, Edit, Trash2, Crown, Heart, Building, Eye, EyeOff } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { ReferralType } from '../types';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { Customer, CustomerLevel, PointMovement, Reward, Campaign, Referral, ReferralType, Settings, CustomerValidation, Branch } from '../types';
+import { useSupabaseTable, useCustomers, usePointMovements } from '../hooks/useSupabase';
 
-const Referrals: React.FC = () => {
-  const { referrals, referralTypes, customers, addReferralType, updateReferralType, deleteReferralType } = useApp();
-  const [activeTab, setActiveTab] = useState<'list' | 'types' | 'config'>('list');
-  const [showModal, setShowModal] = useState(false);
-  const [editingType, setEditingType] = useState<ReferralType | null>(null);
-  const [newReferralType, setNewReferralType] = useState({
-    name: '',
-    description: '',
-    icon: 'user-plus',
-    color: '#3B82F6',
-    isActive: true,
-    methods: ['email'] as ('email' | 'whatsapp' | 'sms' | 'qrcode')[],
-    referrerReward: {
-      type: 'points' as 'fixed' | 'percentage' | 'points' | 'gift',
-      value: 0,
-      description: ''
-    },
-    referredReward: {
-      type: 'points' as 'fixed' | 'percentage' | 'points' | 'gift',
-      value: 0,
-      description: ''
-    },
-    conditions: {
-      minPurchaseValue: 0,
-      validityDays: 30,
-      maxReferrals: 0,
-      requiresFirstPurchase: false
-    }
-  });
+interface AppContextType {
+  customers: Customer[];
+  levels: CustomerLevel[];
+  movements: PointMovement[];
+  rewards: Reward[];
+  campaigns: Campaign[];
+  referrals: Referral[];
+  referralTypes: ReferralType[];
+  branches: Branch[];
+  settings: Settings;
+  loading: boolean;
+  error: string | null;
+  updateCustomer: (id: string, customer: Partial<Customer>) => void;
+  addMovement: (movement: Omit<PointMovement, 'id'>) => void;
+  updateSettings: (settings: Partial<Settings>) => void;
+  addReferralType: (referralType: Omit<ReferralType, 'id'>) => void;
+  updateReferralType: (id: string, referralType: Partial<ReferralType>) => void;
+  deleteReferralType: (id: string) => void;
+  addReferral: (referral: Omit<Referral, 'id'>) => void; // Added addReferral to interface
+  validateCustomer: (document: string, email?: string, phone?: string) => CustomerValidation;
+  findCustomerByDocument: (document: string) => Customer | undefined;
+  findCustomerByEmail: (email: string) => Customer | undefined;
+  findCustomerByPhone: (phone: string) => Customer | undefined;
+  addCustomer: (customer: Omit<Customer, 'id'>) => Customer | null;
+  // Funções para níveis
+  addLevel: (level: Omit<CustomerLevel, 'id'>) => void;
+  updateLevel: (id: string, level: Partial<CustomerLevel>) => void;
+  deleteLevel: (id: string) => void;
+  // Funções para filiais
+  addBranch: (branch: Omit<Branch, 'id'>) => void;
+  updateBranch: (id: string, branch: Partial<Branch>) => void;
+  deleteBranch: (id: string) => void;
+  // Funções para limpeza de dados
+  clearAllData: () => void;
+}
 
-  // Função para obter nome completo
-  const getFullName = (customer: any): string => {
-    return `${customer.firstName} ${customer.lastName}`.trim();
-  };
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'validated': return <Check className="w-5 h-5 text-green-600" />;
-      case 'rejected': return <X className="w-5 h-5 text-red-600" />;
-      case 'pending': return <Clock className="w-5 h-5 text-yellow-600" />;
-      default: return <Clock className="w-5 h-5 text-gray-600" />;
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'validated': return 'Validada';
-      case 'rejected': return 'Rejeitada';
-      case 'pending': return 'Pendente';
-      default: return status;
-    }
-  };
-
-  const getMethodIcon = (method: string) => {
-    switch (method) {
-      case 'email': return <Mail className="w-4 h-4" />;
-      case 'whatsapp': return <MessageSquare className="w-4 h-4" />;
-      case 'sms': return <Smartphone className="w-4 h-4" />;
-      case 'qrcode': return <QrCode className="w-4 h-4" />;
-      default: return <UserPlus className="w-4 h-4" />;
-    }
-  };
-
-  const getTypeIcon = (icon: string) => {
-    switch (icon) {
-      case 'crown': return <Crown className="w-5 h-5" />;
-      case 'heart': return <Heart className="w-5 h-5" />;
-      case 'building': return <Building className="w-5 h-5" />;
-      case 'gift': return <Gift className="w-5 h-5" />;
-      default: return <UserPlus className="w-5 h-5" />;
-    }
-  };
-
-  const getRewardTypeLabel = (type: string) => {
-    switch (type) {
-      case 'fixed': return 'Valor Fixo (R$)';
-      case 'percentage': return 'Percentual (%)';
-      case 'points': return 'Pontos';
-      case 'gift': return 'Brinde';
-      default: return type;
-    }
-  };
-
-  const handleSaveReferralType = () => {
-    if (editingType) {
-      updateReferralType(editingType.id, newReferralType);
-    } else {
-      addReferralType(newReferralType);
-    }
-    
-    setShowModal(false);
-    setEditingType(null);
-    setNewReferralType({
-      name: '',
-      description: '',
-      icon: 'user-plus',
-      color: '#3B82F6',
-      isActive: true,
-      methods: ['email'],
-      referrerReward: {
-        type: 'points',
-        value: 0,
-        description: ''
-      },
-      referredReward: {
-        type: 'points',
-        value: 0,
-        description: ''
-      },
-      conditions: {
-        minPurchaseValue: 0,
-        validityDays: 30,
-        maxReferrals: 0,
-        requiresFirstPurchase: false
-      }
-    });
-  };
-
-  const handleEditType = (type: ReferralType) => {
-    setEditingType(type);
-    setNewReferralType({
-      name: type.name,
-      description: type.description,
-      icon: type.icon,
-      color: type.color,
-      isActive: type.isActive,
-      methods: type.methods,
-      referrerReward: type.referrerReward,
-      referredReward: type.referredReward,
-      conditions: type.conditions || {
-        minPurchaseValue: 0,
-        validityDays: 30,
-        maxReferrals: 0,
-        requiresFirstPurchase: false
-      }
-    });
-    setShowModal(true);
-  };
-
-  const colorOptions = [
-    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4',
-    '#84CC16', '#F97316', '#EC4899', '#6366F1', '#FFD700', '#CD7F32'
-  ];
-
-  const iconOptions = [
-    { value: 'user-plus', label: 'Usuário Plus' },
-    { value: 'crown', label: 'Coroa' },
-    { value: 'heart', label: 'Coração' },
-    { value: 'building', label: 'Prédio' },
-    { value: 'gift', label: 'Presente' },
-    { value: 'star', label: 'Estrela' },
-    { value: 'award', label: 'Prêmio' },
-    { value: 'trophy', label: 'Troféu' }
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Sistema de Indicações</h1>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setActiveTab('list')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              activeTab === 'list' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            Indicações
-          </button>
-          <button
-            onClick={() => setActiveTab('types')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              activeTab === 'types' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            Tipos de Indicação
-          </button>
-          <button
-            onClick={() => setActiveTab('config')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              activeTab === 'config' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            Configurações
-          </button>
-        </div>
-      </div>
-
-      {activeTab === 'list' && (
-        <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <UserPlus className="w-5 h-5 text-blue-600" />
-                  </div>
-                </div>
-                <div className="ml-5">
-                  <p className="text-sm font-medium text-gray-500">Total de Indicações</p>
-                  <p className="text-2xl font-semibold text-gray-900">{referrals.length}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <Check className="w-5 h-5 text-green-600" />
-                  </div>
-                </div>
-                <div className="ml-5">
-                  <p className="text-sm font-medium text-gray-500">Validadas</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {referrals.filter(r => r.status === 'validated').length}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-yellow-600" />
-                  </div>
-                </div>
-                <div className="ml-5">
-                  <p className="text-sm font-medium text-gray-500">Pendentes</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {referrals.filter(r => r.status === 'pending').length}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Gift className="w-5 h-5 text-purple-600" />
-                  </div>
-                </div>
-                <div className="ml-5">
-                  <p className="text-sm font-medium text-gray-500">Tipos Ativos</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {referralTypes.filter(t => t.isActive).length}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Referrals List */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Lista de Indicações</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Indicador
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Indicado
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tipo
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Método
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {referrals.map((referral) => {
-                    const referrer = customers.find(c => c.id === referral.referrerId);
-                    const referred = customers.find(c => c.id === referral.referredId);
-                    const referralType = referralTypes.find(t => t.id === referral.referralTypeId);
-                    
-                    return (
-                      <tr key={referral.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(referral.date).toLocaleDateString('pt-BR')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{referrer ? getFullName(referrer) : 'N/A'}</div>
-                          <div className="text-sm text-gray-500">{referrer?.email}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{referred ? getFullName(referred) : 'N/A'}</div>
-                          <div className="text-sm text-gray-500">{referred?.email}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div 
-                              className="w-6 h-6 rounded-full flex items-center justify-center mr-2"
-                              style={{ backgroundColor: referralType?.color + '20' }}
-                            >
-                              <div style={{ color: referralType?.color }}>
-                                {getTypeIcon(referralType?.icon || 'user-plus')}
-                              </div>
-                            </div>
-                            <span className="text-sm text-gray-900">{referralType?.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {getMethodIcon(referral.method)}
-                            <span className="ml-2 text-sm text-gray-900 capitalize">
-                              {referral.method}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {getStatusIcon(referral.status)}
-                            <span className="ml-2 text-sm text-gray-900">
-                              {getStatusLabel(referral.status)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {referral.status === 'pending' && (
-                            <div className="flex space-x-2">
-                              <button className="text-green-600 hover:text-green-900">
-                                <Check className="w-4 h-4" />
-                              </button>
-                              <button className="text-red-600 hover:text-red-900">
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
-
-      {activeTab === 'types' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Tipos de Indicação</h2>
-            <button
-              onClick={() => setShowModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Tipo
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {referralTypes.map((type) => (
-              <div key={type.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <div 
-                      className="w-12 h-12 rounded-full flex items-center justify-center mr-3"
-                      style={{ backgroundColor: type.color + '20' }}
-                    >
-                      <div style={{ color: type.color }}>
-                        {getTypeIcon(type.icon)}
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{type.name}</h3>
-                      <div className="flex items-center mt-1">
-                        {type.isActive ? (
-                          <Eye className="w-4 h-4 text-green-600 mr-1" />
-                        ) : (
-                          <EyeOff className="w-4 h-4 text-gray-400 mr-1" />
-                        )}
-                        <span className={`text-sm ${type.isActive ? 'text-green-600' : 'text-gray-400'}`}>
-                          {type.isActive ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEditType(type)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => deleteReferralType(type.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <p className="text-sm text-gray-600 mb-4">{type.description}</p>
-
-                <div className="space-y-3">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Recompensa do Indicador</h4>
-                    <p className="text-sm text-gray-600">
-                      {getRewardTypeLabel(type.referrerReward.type)}: {type.referrerReward.value}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">{type.referrerReward.description}</p>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Recompensa do Indicado</h4>
-                    <p className="text-sm text-gray-600">
-                      {getRewardTypeLabel(type.referredReward.type)}: {type.referredReward.value}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">{type.referredReward.description}</p>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Métodos Disponíveis</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {type.methods.map((method) => (
-                        <span key={method} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {getMethodIcon(method)}
-                          <span className="ml-1 capitalize">{method}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {type.conditions && (
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Condições</h4>
-                      <div className="text-xs text-gray-600 space-y-1">
-                        {type.conditions.minPurchaseValue && (
-                          <div>• Compra mínima: R$ {type.conditions.minPurchaseValue}</div>
-                        )}
-                        {type.conditions.validityDays && (
-                          <div>• Validade: {type.conditions.validityDays} dias</div>
-                        )}
-                        {type.conditions.maxReferrals && (
-                          <div>• Máximo: {type.conditions.maxReferrals} indicações</div>
-                        )}
-                        {type.conditions.requiresFirstPurchase && (
-                          <div>• Requer primeira compra</div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'config' && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Configurações Gerais</h2>
-          
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Validação Automática
-                </label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                  <option value="manual">Manual</option>
-                  <option value="first_purchase">Após primeira compra</option>
-                  <option value="immediate">Imediata</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Limite Global de Indicações por Cliente
-                </label>
-                <input
-                  type="number"
-                  defaultValue={50}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="allowSelfReferral"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="allowSelfReferral" className="ml-2 block text-sm text-gray-900">
-                Permitir auto-indicação (mesmo email/telefone)
-              </label>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="trackReferralSource"
-                defaultChecked
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="trackReferralSource" className="ml-2 block text-sm text-gray-900">
-                Rastrear origem das indicações
-              </label>
-            </div>
-
-            <div className="mt-6">
-              <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                Salvar Configurações
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit Referral Type Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              {editingType ? 'Editar Tipo de Indicação' : 'Novo Tipo de Indicação'}
-            </h2>
-            
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                  <input
-                    type="text"
-                    value={newReferralType.name}
-                    onChange={(e) => setNewReferralType({...newReferralType, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ícone</label>
-                  <select
-                    value={newReferralType.icon}
-                    onChange={(e) => setNewReferralType({...newReferralType, icon: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    {iconOptions.map(icon => (
-                      <option key={icon.value} value={icon.value}>{icon.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                <textarea
-                  value={newReferralType.description}
-                  onChange={(e) => setNewReferralType({...newReferralType, description: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Cor</label>
-                <div className="flex flex-wrap gap-2">
-                  {colorOptions.map(color => (
-                    <button
-                      key={color}
-                      onClick={() => setNewReferralType({...newReferralType, color})}
-                      className={`w-8 h-8 rounded-full border-2 ${
-                        newReferralType.color === color ? 'border-gray-800' : 'border-gray-300'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Métodos de Indicação</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {['email', 'whatsapp', 'sms', 'qrcode'].map(method => (
-                    <label key={method} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={newReferralType.methods.includes(method as any)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setNewReferralType({
-                              ...newReferralType,
-                              methods: [...newReferralType.methods, method as any]
-                            });
-                          } else {
-                            setNewReferralType({
-                              ...newReferralType,
-                              methods: newReferralType.methods.filter(m => m !== method)
-                            });
-                          }
-                        }}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm text-gray-900 capitalize">{method}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-900">Recompensa do Indicador</h3>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                    <select
-                      value={newReferralType.referrerReward.type}
-                      onChange={(e) => setNewReferralType({
-                        ...newReferralType,
-                        referrerReward: { ...newReferralType.referrerReward, type: e.target.value as any }
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="points">Pontos</option>
-                      <option value="fixed">Valor Fixo (R$)</option>
-                      <option value="percentage">Percentual (%)</option>
-                      <option value="gift">Brinde</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
-                    <input
-                      type="number"
-                      value={newReferralType.referrerReward.value}
-                      onChange={(e) => setNewReferralType({
-                        ...newReferralType,
-                        referrerReward: { ...newReferralType.referrerReward, value: Number(e.target.value) }
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                    <input
-                      type="text"
-                      value={newReferralType.referrerReward.description}
-                      onChange={(e) => setNewReferralType({
-                        ...newReferralType,
-                        referrerReward: { ...newReferralType.referrerReward, description: e.target.value }
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-900">Recompensa do Indicado</h3>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                    <select
-                      value={newReferralType.referredReward.type}
-                      onChange={(e) => setNewReferralType({
-                        ...newReferralType,
-                        referredReward: { ...newReferralType.referredReward, type: e.target.value as any }
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="points">Pontos</option>
-                      <option value="fixed">Valor Fixo (R$)</option>
-                      <option value="percentage">Percentual (%)</option>
-                      <option value="gift">Brinde</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
-                    <input
-                      type="number"
-                      value={newReferralType.referredReward.value}
-                      onChange={(e) => setNewReferralType({
-                        ...newReferralType,
-                        referredReward: { ...newReferralType.referredReward, value: Number(e.target.value) }
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                    <input
-                      type="text"
-                      value={newReferralType.referredReward.description}
-                      onChange={(e) => setNewReferralType({
-                        ...newReferralType,
-                        referredReward: { ...newReferralType.referredReward, description: e.target.value }
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Condições</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Compra Mínima (R$)</label>
-                    <input
-                      type="number"
-                      value={newReferralType.conditions.minPurchaseValue}
-                      onChange={(e) => setNewReferralType({
-                        ...newReferralType,
-                        conditions: { ...newReferralType.conditions, minPurchaseValue: Number(e.target.value) }
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Validade (dias)</label>
-                    <input
-                      type="number"
-                      value={newReferralType.conditions.validityDays}
-                      onChange={(e) => setNewReferralType({
-                        ...newReferralType,
-                        conditions: { ...newReferralType.conditions, validityDays: Number(e.target.value) }
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Máximo de Indicações</label>
-                    <input
-                      type="number"
-                      value={newReferralType.conditions.maxReferrals}
-                      onChange={(e) => setNewReferralType({
-                        ...newReferralType,
-                        conditions: { ...newReferralType.conditions, maxReferrals: Number(e.target.value) }
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="requiresFirstPurchase"
-                      checked={newReferralType.conditions.requiresFirstPurchase}
-                      onChange={(e) => setNewReferralType({
-                        ...newReferralType,
-                        conditions: { ...newReferralType.conditions, requiresFirstPurchase: e.target.checked }
-                      })}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="requiresFirstPurchase" className="ml-2 block text-sm text-gray-900">
-                      Requer primeira compra
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={newReferralType.isActive}
-                  onChange={(e) => setNewReferralType({...newReferralType, isActive: e.target.checked})}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
-                  Tipo de indicação ativo
-                </label>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowModal(false);
-                  setEditingType(null);
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveReferralType}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                {editingType ? 'Atualizar' : 'Criar'} Tipo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+export const useApp = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
 };
 
-export default Referrals;
+// Mock levels como fallback
+const mockLevels: CustomerLevel[] = [
+  {
+    id: '550e8400-e29b-41d4-a716-446655440000',
+    name: 'Bronze',
+    color: '#CD7F32',
+    icon: 'award',
+    order: 1,
+    requirements: {
+      minPoints: 0,
+      minPurchaseValue: 0,
+      timeframe: 0
+    },
+    benefits: {
+      pointsMultiplier: 1.0,
+      referralBonus: 1.0,
+      freeShipping: false,
+      exclusiveEvents: false,
+      customRewards: []
+    }
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-446655440001',
+    name: 'Prata',
+    color: '#C0C0C0',
+    icon: 'star',
+    order: 2,
+    requirements: {
+      minPoints: 1000,
+      minPurchaseValue: 500,
+      timeframe: 365
+    },
+    benefits: {
+      pointsMultiplier: 1.2,
+      referralBonus: 1.5,
+      freeShipping: true,
+      exclusiveEvents: false,
+      customRewards: []
+    }
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-446655440002',
+    name: 'Ouro',
+    color: '#FFD700',
+    icon: 'crown',
+    order: 3,
+    requirements: {
+      minPoints: 5000,
+      minPurchaseValue: 2000,
+      timeframe: 365
+    },
+    benefits: {
+      pointsMultiplier: 1.5,
+      referralBonus: 2.0,
+      freeShipping: true,
+      exclusiveEvents: true,
+      customRewards: []
+    }
+  }
+];
+
+// Mock branches como fallback
+const mockBranches: Branch[] = [
+  {
+    id: '550e8400-e29b-41d4-a716-446655440100',
+    name: 'Filial Centro',
+    code: 'FIL001',
+    address: 'Rua das Flores, 123 - Centro - São Paulo, SP',
+    phone: '(11) 3333-4444',
+    email: 'centro@empresa.com',
+    manager: 'João Silva',
+    isActive: true,
+    color: '#3B82F6',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-446655440101',
+    name: 'Filial Shopping',
+    code: 'FIL002',
+    address: 'Shopping Center, Loja 45 - Vila Madalena - São Paulo, SP',
+    phone: '(11) 5555-6666',
+    email: 'shopping@empresa.com',
+    manager: 'Maria Santos',
+    isActive: true,
+    color: '#10B981',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+// Função para validar CPF
+const validateCPF = (cpf: string): boolean => {
+  const cleanCPF = cpf.replace(/[^\d]/g, '');
+  
+  if (cleanCPF.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cleanCPF)) return false;
+  
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(cleanCPF.charAt(i)) * (10 - i);
+  }
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleanCPF.charAt(9))) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(cleanCPF.charAt(i)) * (11 - i);
+  }
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleanCPF.charAt(10))) return false;
+  
+  return true;
+};
+
+// Função para formatar CPF
+const formatCPF = (cpf: string): string => {
+  const cleanCPF = cpf.replace(/[^\d]/g, '');
+  return cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+};
+
+// Função para transformar dados do Supabase para o formato da aplicação
+const transformCustomerFromDB = (dbCustomer: any): Customer => ({
+  id: dbCustomer.id,
+  firstName: dbCustomer.first_name,
+  lastName: dbCustomer.last_name,
+  email: dbCustomer.email,
+  phone: dbCustomer.phone,
+  document: dbCustomer.document,
+  points: dbCustomer.points,
+  level: transformLevelFromDB(dbCustomer.level),
+  status: dbCustomer.status,
+  registrationDate: dbCustomer.registration_date,
+  lastPurchase: dbCustomer.last_purchase,
+  address: dbCustomer.address,
+  preferences: dbCustomer.preferences,
+  emailVerified: dbCustomer.email_verified,
+  phoneVerified: dbCustomer.phone_verified,
+  documentVerified: dbCustomer.document_verified
+});
+
+const transformLevelFromDB = (dbLevel: any): CustomerLevel => ({
+  id: dbLevel.id,
+  name: dbLevel.name,
+  color: dbLevel.color,
+  icon: dbLevel.icon,
+  order: dbLevel.order_position,
+  requirements: {
+    minPoints: dbLevel.min_points,
+    minPurchaseValue: dbLevel.min_purchase_value,
+    timeframe: dbLevel.timeframe_days
+  },
+  benefits: {
+    pointsMultiplier: dbLevel.points_multiplier,
+    referralBonus: dbLevel.referral_bonus,
+    freeShipping: dbLevel.free_shipping,
+    exclusiveEvents: dbLevel.exclusive_events,
+    customRewards: dbLevel.custom_rewards || []
+  }
+});
+
+const transformMovementFromDB = (dbMovement: any): PointMovement => ({
+  id: dbMovement.id,
+  customerId: dbMovement.customer_id,
+  customerDocument: dbMovement.customer_document,
+  branchId: dbMovement.branch_id,
+  type: dbMovement.type,
+  points: dbMovement.points,
+  description: dbMovement.description,
+  date: dbMovement.date,
+  reference: dbMovement.reference,
+  couponCode: dbMovement.coupon_code
+});
+
+const transformBranchFromDB = (dbBranch: any): Branch => ({
+  id: dbBranch.id,
+  name: dbBranch.name,
+  code: dbBranch.code,
+  address: dbBranch.address,
+  phone: dbBranch.phone,
+  email: dbBranch.email,
+  manager: dbBranch.manager,
+  isActive: dbBranch.is_active,
+  color: dbBranch.color,
+  created_at: dbBranch.created_at,
+  updated_at: dbBranch.updated_at
+});
+
+export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Hooks do Supabase
+  const { 
+    customers: dbCustomers, 
+    loading: customersLoading, 
+    error: customersError,
+    addCustomer: addCustomerDB,
+    updateCustomer: updateCustomerDB,
+    findCustomerByDocument: findCustomerByDocumentDB,
+    findCustomerByEmail: findCustomerByEmailDB,
+    findCustomerByPhone: findCustomerByPhoneDB,
+    clearCustomers
+  } = useCustomers();
+
+  const { 
+    data: dbLevels, 
+    loading: levelsLoading, 
+    error: levelsError,
+    insert: insertLevel,
+    update: updateLevelDB,
+    remove: removeLevel
+  } = useSupabaseTable('customer_levels');
+
+  const { 
+    movements: dbMovements, 
+    loading: movementsLoading, 
+    error: movementsError,
+    addMovement: addMovementDB,
+    clearMovements
+  } = usePointMovements();
+
+  const { 
+    data: dbRewards, 
+    loading: rewardsLoading, 
+    error: rewardsError 
+  } = useSupabaseTable('rewards');
+
+  const { 
+    data: dbCampaigns, 
+    loading: campaignsLoading, 
+    error: campaignsError 
+  } = useSupabaseTable('campaigns');
+
+  const { 
+    data: dbReferrals, 
+    loading: referralsLoading, 
+    error: referralsError,
+    insert: insertReferral
+  } = useSupabaseTable('referrals');
+
+  const { 
+    data: dbReferralTypes, 
+    loading: referralTypesLoading, 
+    error: referralTypesError,
+    insert: insertReferralType,
+    update: updateReferralTypeDB,
+    remove: removeReferralType
+  } = useSupabaseTable('referral_types');
+
+  const { 
+    data: dbBranches, 
+    loading: branchesLoading, 
+    error: branchesError,
+    insert: insertBranch,
+    update: updateBranchDB,
+    remove: removeBranch
+  } = useSupabaseTable('branches');
+
+  const { 
+    data: dbSettings, 
+    loading: settingsLoading, 
+    error: settingsError,
+    update: updateSettingsDB
+  } = useSupabaseTable('settings');
+
+  // Transformar dados do banco para o formato da aplicação
+  const customers: Customer[] = dbCustomers.map(transformCustomerFromDB);
+  
+  // Use mock levels as fallback if database levels are empty
+  const levels: CustomerLevel[] = dbLevels.length > 0 ? dbLevels.map(transformLevelFromDB) : mockLevels;
+  
+  const movements: PointMovement[] = dbMovements.map(transformMovementFromDB);
+  
+  // Use mock branches as fallback if database branches are empty
+  const branches: Branch[] = dbBranches.length > 0 ? dbBranches.map(transformBranchFromDB) : mockBranches;
+  
+  const rewards: Reward[] = dbRewards.map(reward => ({
+    id: reward.id,
+    name: reward.name,
+    description: reward.description,
+    pointsCost: reward.points_cost,
+    type: reward.type,
+    value: reward.value,
+    isActive: reward.is_active,
+    expirationDays: reward.expiration_days,
+    image: reward.image_url,
+    conditions: reward.conditions
+  }));
+
+  const campaigns: Campaign[] = dbCampaigns.map(campaign => ({
+    id: campaign.id,
+    name: campaign.name,
+    type: campaign.type,
+    multiplier: campaign.multiplier,
+    startDate: campaign.start_date,
+    endDate: campaign.end_date,
+    products: campaign.products,
+    isActive: campaign.is_active,
+    widget: campaign.widget
+  }));
+
+  const referrals: Referral[] = dbReferrals.map(referral => ({
+    id: referral.id,
+    referrerId: referral.referrer_id,
+    referrerDocument: referral.referrer_document,
+    referredId: referral.referred_id,
+    referredDocument: referral.referred_document,
+    referredIdentifier: referral.referred_identifier,
+    referredIdentifierType: referral.referred_identifier_type,
+    referralTypeId: referral.referral_type_id,
+    status: referral.status,
+    date: referral.date,
+    method: referral.method,
+    validatedDate: referral.validated_date,
+    rejectedReason: referral.rejected_reason,
+    purchaseValue: referral.purchase_value
+  }));
+
+  const referralTypes: ReferralType[] = dbReferralTypes.map(type => ({
+    id: type.id,
+    name: type.name,
+    description: type.description,
+    icon: type.icon,
+    color: type.color,
+    isActive: type.is_active,
+    methods: type.methods as any,
+    referrerReward: type.referrer_reward,
+    referredReward: type.referred_reward,
+    conditions: type.conditions
+  }));
+
+  const settings: Settings = dbSettings[0] ? {
+    company: dbSettings[0].company,
+    program: dbSettings[0].program,
+    notifications: dbSettings[0].notifications,
+    validation: dbSettings[0].validation,
+    terms: dbSettings[0].terms
+  } : {
+    company: { name: 'Loja Exemplo', website: 'https://lojaexemplo.com', address: 'Rua das Flores, 123 - São Paulo, SP' },
+    program: { 
+      name: 'Programa Fidelidade', 
+      primaryColor: '#3B82F6', 
+      secondaryColor: '#10B981', 
+      font: 'Inter', 
+      pointsPerReal: 1, 
+      minPurchaseValue: 50,
+      pointsExpiration: { enabled: true, days: 365, notifyDaysBefore: 30 }
+    },
+    notifications: { email: true, whatsapp: true, sms: false },
+    validation: { 
+      requireCpfValidation: true, 
+      requireEmailVerification: false, 
+      requirePhoneVerification: false, 
+      allowDuplicateEmail: false, 
+      allowDuplicatePhone: true 
+    },
+    terms: ''
+  };
+
+  // Estado de loading geral
+  const loading = customersLoading || levelsLoading || movementsLoading || 
+                 rewardsLoading || campaignsLoading || referralsLoading || 
+                 referralTypesLoading || branchesLoading || settingsLoading;
+
+  // Erro geral
+  const error = customersError || levelsError || movementsError || 
+               rewardsError || campaignsError || referralsError || 
+               referralTypesError || branchesError || settingsError;
+
+  // Funções de validação
+  const findCustomerByDocument = (document: string): Customer | undefined => {
+    const dbCustomer = findCustomerByDocumentDB(document);
+    return dbCustomer ? transformCustomerFromDB(dbCustomer) : undefined;
+  };
+
+  const findCustomerByEmail = (email: string): Customer | undefined => {
+    const dbCustomer = findCustomerByEmailDB(email);
+    return dbCustomer ? transformCustomerFromDB(dbCustomer) : undefined;
+  };
+
+  const findCustomerByPhone = (phone: string): Customer | undefined => {
+    const dbCustomer = findCustomerByPhoneDB(phone);
+    return dbCustomer ? transformCustomerFromDB(dbCustomer) : undefined;
+  };
+
+  const validateCustomer = (document: string, email?: string, phone?: string): CustomerValidation => {
+    const cleanDocument = document.replace(/[^\d]/g, '');
+    
+    // Validar CPF
+    if (!validateCPF(cleanDocument)) {
+      return {
+        document: formatCPF(cleanDocument),
+        email,
+        phone,
+        isValid: false,
+        conflicts: { duplicateDocument: false }
+      };
+    }
+
+    const conflicts: CustomerValidation['conflicts'] = {};
+    let hasConflicts = false;
+
+    // Verificar CPF duplicado
+    const existingByDocument = findCustomerByDocument(cleanDocument);
+    if (existingByDocument) {
+      conflicts.duplicateDocument = true;
+      conflicts.existingCustomer = existingByDocument;
+      hasConflicts = true;
+    }
+
+    // Verificar email duplicado (se não permitido)
+    if (email && !settings.validation.allowDuplicateEmail) {
+      const existingByEmail = findCustomerByEmail(email);
+      if (existingByEmail && existingByEmail.document !== formatCPF(cleanDocument)) {
+        conflicts.duplicateEmail = true;
+        if (!conflicts.existingCustomer) conflicts.existingCustomer = existingByEmail;
+        hasConflicts = true;
+      }
+    }
+
+    // Verificar telefone duplicado (se não permitido)
+    if (phone && !settings.validation.allowDuplicatePhone) {
+      const existingByPhone = findCustomerByPhone(phone);
+      if (existingByPhone && existingByPhone.document !== formatCPF(cleanDocument)) {
+        conflicts.duplicatePhone = true;
+        if (!conflicts.existingCustomer) conflicts.existingCustomer = existingByPhone;
+        hasConflicts = true;
+      }
+    }
+
+    return {
+      document: formatCPF(cleanDocument),
+      email,
+      phone,
+      isValid: !hasConflicts,
+      conflicts: hasConflicts ? conflicts : undefined
+    };
+  };
+
+  // Funções CRUD
+  const addCustomer = async (customerData: Omit<Customer, 'id'>): Promise<Customer | null> => {
+    const validation = validateCustomer(customerData.document, customerData.email, customerData.phone);
+    
+    if (!validation.isValid) {
+      return null;
+    }
+
+    try {
+      // Ensure we have a valid level - use the first available level
+      const defaultLevel = levels[0];
+      if (!defaultLevel) {
+        console.error('Nenhum nível disponível para atribuir ao cliente');
+        return null;
+      }
+
+      const dbCustomer = await addCustomerDB({
+        ...customerData,
+        document: formatCPF(customerData.document),
+        level: defaultLevel
+      });
+      return transformCustomerFromDB(dbCustomer);
+    } catch (error) {
+      console.error('Erro ao adicionar cliente:', error);
+      return null;
+    }
+  };
+
+  const updateCustomer = async (id: string, updatedCustomer: Partial<Customer>) => {
+    try {
+      await updateCustomerDB(id, updatedCustomer);
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error);
+    }
+  };
+
+  const addMovement = async (movement: Omit<PointMovement, 'id'>) => {
+    try {
+      // Verificar se a filial foi fornecida
+      if (!movement.branchId) {
+        throw new Error('Filial é obrigatória para movimentações');
+      }
+
+      await addMovementDB(movement);
+    } catch (error) {
+      console.error('Erro ao adicionar movimentação:', error);
+      throw error;
+    }
+  };
+
+  const updateSettings = async (newSettings: Partial<Settings>) => {
+    try {
+      if (dbSettings[0]) {
+        await updateSettingsDB(dbSettings[0].id, {
+          company: { ...settings.company, ...newSettings.company },
+          program: { ...settings.program, ...newSettings.program },
+          notifications: { ...settings.notifications, ...newSettings.notifications },
+          validation: { ...settings.validation, ...newSettings.validation },
+          terms: newSettings.terms || settings.terms
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar configurações:', error);
+    }
+  };
+
+  // Funções para níveis
+  const addLevel = async (levelData: Omit<CustomerLevel, 'id'>) => {
+    try {
+      await insertLevel({
+        name: levelData.name,
+        color: levelData.color,
+        icon: levelData.icon,
+        order_position: levelData.order,
+        min_points: levelData.requirements.minPoints,
+        min_purchase_value: levelData.requirements.minPurchaseValue,
+        timeframe_days: levelData.requirements.timeframe,
+        points_multiplier: levelData.benefits.pointsMultiplier,
+        referral_bonus: levelData.benefits.referralBonus,
+        free_shipping: levelData.benefits.freeShipping,
+        exclusive_events: levelData.benefits.exclusiveEvents,
+        custom_rewards: levelData.benefits.customRewards
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar nível:', error);
+    }
+  };
+
+  const updateLevel = async (id: string, updatedLevel: Partial<CustomerLevel>) => {
+    try {
+      const updateData: any = {};
+      
+      if (updatedLevel.name) updateData.name = updatedLevel.name;
+      if (updatedLevel.color) updateData.color = updatedLevel.color;
+      if (updatedLevel.icon) updateData.icon = updatedLevel.icon;
+      if (updatedLevel.order) updateData.order_position = updatedLevel.order;
+      
+      if (updatedLevel.requirements) {
+        if (updatedLevel.requirements.minPoints !== undefined) updateData.min_points = updatedLevel.requirements.minPoints;
+        if (updatedLevel.requirements.minPurchaseValue !== undefined) updateData.min_purchase_value = updatedLevel.requirements.minPurchaseValue;
+        if (updatedLevel.requirements.timeframe !== undefined) updateData.timeframe_days = updatedLevel.requirements.timeframe;
+      }
+      
+      if (updatedLevel.benefits) {
+        if (updatedLevel.benefits.pointsMultiplier !== undefined) updateData.points_multiplier = updatedLevel.benefits.pointsMultiplier;
+        if (updatedLevel.benefits.referralBonus !== undefined) updateData.referral_bonus = updatedLevel.benefits.referralBonus;
+        if (updatedLevel.benefits.freeShipping !== undefined) updateData.free_shipping = updatedLevel.benefits.freeShipping;
+        if (updatedLevel.benefits.exclusiveEvents !== undefined) updateData.exclusive_events = updatedLevel.benefits.exclusiveEvents;
+        if (updatedLevel.benefits.customRewards !== undefined) updateData.custom_rewards = updatedLevel.benefits.customRewards;
+      }
+
+      await updateLevelDB(id, updateData);
+    } catch (error) {
+      console.error('Erro ao atualizar nível:', error);
+    }
+  };
+
+  const deleteLevel = async (id: string) => {
+    // Verificar se há clientes neste nível
+    const customersWithLevel = customers.filter(customer => customer.level.id === id);
+    if (customersWithLevel.length > 0) {
+      alert(`Não é possível deletar este nível pois há ${customersWithLevel.length} cliente(s) associado(s) a ele.`);
+      return;
+    }
+
+    // Verificar se é o último nível
+    if (levels.length <= 1) {
+      alert('Não é possível deletar o último nível. Deve haver pelo menos um nível ativo.');
+      return;
+    }
+
+    try {
+      await removeLevel(id);
+    } catch (error) {
+      console.error('Erro ao deletar nível:', error);
+    }
+  };
+
+  // Funções para filiais
+  const addBranch = async (branchData: Omit<Branch, 'id'>) => {
+    try {
+      await insertBranch({
+        name: branchData.name,
+        code: branchData.code,
+        address: branchData.address,
+        phone: branchData.phone,
+        email: branchData.email,
+        manager: branchData.manager,
+        is_active: branchData.isActive,
+        color: branchData.color
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar filial:', error);
+    }
+  };
+
+  const updateBranch = async (id: string, updatedBranch: Partial<Branch>) => {
+    try {
+      const updateData: any = {};
+      
+      if (updatedBranch.name) updateData.name = updatedBranch.name;
+      if (updatedBranch.code) updateData.code = updatedBranch.code;
+      if (updatedBranch.address) updateData.address = updatedBranch.address;
+      if (updatedBranch.phone) updateData.phone = updatedBranch.phone;
+      if (updatedBranch.email) updateData.email = updatedBranch.email;
+      if (updatedBranch.manager) updateData.manager = updatedBranch.manager;
+      if (updatedBranch.isActive !== undefined) updateData.is_active = updatedBranch.isActive;
+      if (updatedBranch.color) updateData.color = updatedBranch.color;
+
+      await updateBranchDB(id, updateData);
+    } catch (error) {
+      console.error('Erro ao atualizar filial:', error);
+    }
+  };
+
+  const deleteBranch = async (id: string) => {
+    try {
+      await removeBranch(id);
+    } catch (error) {
+      console.error('Erro ao deletar filial:', error);
+    }
+  };
+
+  // Funções para tipos de indicação
+  const addReferralType = async (referralType: Omit<ReferralType, 'id'>) => {
+    try {
+      await insertReferralType({
+        name: referralType.name,
+        description: referralType.description,
+        icon: referralType.icon,
+        color: referralType.color,
+        is_active: referralType.isActive,
+        methods: referralType.methods,
+        referrer_reward: referralType.referrerReward,
+        referred_reward: referralType.referredReward,
+        conditions: referralType.conditions
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar tipo de indicação:', error);
+    }
+  };
+
+  const updateReferralType = async (id: string, updatedReferralType: Partial<ReferralType>) => {
+    try {
+      const updateData: any = {};
+      
+      if (updatedReferralType.name) updateData.name = updatedReferralType.name;
+      if (updatedReferralType.description) updateData.description = updatedReferralType.description;
+      if (updatedReferralType.icon) updateData.icon = updatedReferralType.icon;
+      if (updatedReferralType.color) updateData.color = updatedReferralType.color;
+      if (updatedReferralType.isActive !== undefined) updateData.is_active = updatedReferralType.isActive;
+      if (updatedReferralType.methods) updateData.methods = updatedReferralType.methods;
+      if (updatedReferralType.referrerReward) updateData.referrer_reward = updatedReferralType.referrerReward;
+      if (updatedReferralType.referredReward) updateData.referred_reward = updatedReferralType.referredReward;
+      if (updatedReferralType.conditions) updateData.conditions = updatedReferralType.conditions;
+
+      await updateReferralTypeDB(id, updateData);
+    } catch (error) {
+      console.error('Erro ao atualizar tipo de indicação:', error);
+    }
+  };
+
+  const deleteReferralType = async (id: string) => {
+    try {
+      await removeReferralType(id);
+    } catch (error) {
+      console.error('Erro ao deletar tipo de indicação:', error);
+    }
+  };
+
+  // Função para adicionar uma nova indicação
+  const addReferral = async (referralData: Omit<Referral, 'id'>) => {
+    try {
+      await insertReferral({
+        referrer_id: referralData.referrerId,
+        referrer_document: referralData.referrerDocument,
+        referred_id: referralData.referredId,
+        referred_document: referralData.referredDocument,
+        referred_identifier: referralData.referredIdentifier,
+        referred_identifier_type: referralData.referredIdentifierType,
+        referral_type_id: referralData.referralTypeId,
+        status: referralData.status,
+        date: referralData.date,
+        method: referralData.method,
+        validated_date: referralData.validatedDate,
+        rejected_reason: referralData.rejectedReason,
+        purchase_value: referralData.purchaseValue
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar indicação:', error);
+    }
+  };
+
+  // Função para limpar todos os dados
+  const clearAllData = async () => {
+    try {
+      if (clearCustomers) await clearCustomers();
+      if (clearMovements) await clearMovements();
+      console.log('Todos os dados foram limpos com sucesso');
+    } catch (error) {
+      console.error('Erro ao limpar dados:', error);
+    }
+  };
+
+  return (
+    <AppContext.Provider value={{
+      customers,
+      levels,
+      movements,
+      rewards,
+      campaigns,
+      referrals,
+      referralTypes,
+      branches,
+      settings,
+      loading,
+      error,
+      updateCustomer,
+      addMovement,
+      updateSettings,
+      addReferralType,
+      updateReferralType,
+      deleteReferralType,
+      addReferral, // Added addReferral to context value
+      validateCustomer,
+      findCustomerByDocument,
+      findCustomerByEmail,
+      findCustomerByPhone,
+      addCustomer,
+      addLevel,
+      updateLevel,
+      deleteLevel,
+      addBranch,
+      updateBranch,
+      deleteBranch,
+      clearAllData
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
+};
