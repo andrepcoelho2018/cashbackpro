@@ -142,8 +142,8 @@ export interface Referral {
   id: string;
   referrerId: string;
   referrerDocument: string; // CPF do indicador
-  referredId: string;
-  referredDocument: string; // CPF do indicado
+  referredId: string | null; // Pode ser null se o indicado ainda não se cadastrou
+  referredDocument: string | null; // CPF do indicado - pode ser null
   referredIdentifier: string; // Email ou telefone usado na indicação
   referredIdentifierType: 'email' | 'phone';
   referralTypeId: string;
