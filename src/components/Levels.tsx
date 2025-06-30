@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Star, Crown, Award, Trophy, Gem, X } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useCustomerContext } from '../context/CustomerContext';
 import { CustomerLevel } from '../types';
 
 const Levels: React.FC = () => {
-  const { levels, addLevel, updateLevel, deleteLevel } = useApp();
+  const { levels, addLevel, updateLevel, deleteLevel } = useCustomerContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLevel, setEditingLevel] = useState<CustomerLevel | null>(null);
   const [formData, setFormData] = useState({

@@ -7,8 +7,7 @@ import CustomerDetail from './CustomerDetail';
 import PhoneInput from './PhoneInput';
 
 const Customers: React.FC = () => {
-  const { levels } = useApp();
-  const { customers, validateCustomer, addCustomer } = useCustomerContext();
+  const { customers, levels, validateCustomer, addCustomer } = useCustomerContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);

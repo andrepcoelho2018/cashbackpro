@@ -11,8 +11,8 @@ interface CustomerDetailProps {
 }
 
 const CustomerDetail: React.FC<CustomerDetailProps> = ({ customer, onBack }) => {
-  const { movements, levels, addMovement } = useApp();
-  const { updateCustomer } = useCustomerContext();
+  const { movements, addMovement } = useApp();
+  const { levels, updateCustomer } = useCustomerContext();
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState(customer);
   const [pointsToAdd, setPointsToAdd] = useState(0);
