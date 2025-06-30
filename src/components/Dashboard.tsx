@@ -7,7 +7,13 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onPageChange }) => {
-  const { customers, movements, rewards, referrals, clearAllData } = useApp();
+  const { 
+    customers = [], 
+    movements = [], 
+    rewards = [], 
+    referrals = [], 
+    clearAllData 
+  } = useApp();
 
   // Função para obter nome completo
   const getFullName = (customer: any): string => {
