@@ -110,6 +110,36 @@ const Dashboard: React.FC<DashboardProps> = ({ onPageChange }) => {
         })}
       </div>
 
+      {/* Quick Actions */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Ações Rápidas
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button 
+            onClick={() => onPageChange('customers')}
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+          >
+            <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+            <p className="text-sm font-medium text-gray-600">Adicionar Cliente</p>
+          </button>
+          <button 
+            onClick={() => onPageChange('rewards')}
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+          >
+            <Gift className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+            <p className="text-sm font-medium text-gray-600">Nova Recompensa</p>
+          </button>
+          <button 
+            onClick={() => onPageChange('movements')}
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
+          >
+            <TrendingUp className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+            <p className="text-sm font-medium text-gray-600">Registrar Pontos</p>
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Movements */}
         <div className="bg-white rounded-lg shadow-md p-6">
@@ -193,36 +223,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onPageChange }) => {
               <p className="text-sm text-gray-400">Os clientes aparecerão aqui quando cadastrados</p>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Ações Rápidas
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button 
-            onClick={() => onPageChange('customers')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-          >
-            <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-600">Adicionar Cliente</p>
-          </button>
-          <button 
-            onClick={() => onPageChange('rewards')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-          >
-            <Gift className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-600">Nova Recompensa</p>
-          </button>
-          <button 
-            onClick={() => onPageChange('movements')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
-          >
-            <TrendingUp className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-600">Registrar Pontos</p>
-          </button>
         </div>
       </div>
     </div>
