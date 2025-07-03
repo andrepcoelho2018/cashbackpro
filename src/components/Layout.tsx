@@ -12,6 +12,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,6 +22,8 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { settings } = useApp();
+  const primaryColor = settings.program.primaryColor;
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
@@ -51,7 +54,10 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
       <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0`}>
-        <div className="flex items-center justify-center h-16 bg-blue-600 text-white">
+        <div 
+          className="flex items-center justify-center h-16 text-white"
+          style={{ backgroundColor: primaryColor }}
+        >
           <Gift className="w-8 h-8 mr-2" />
           <span className="text-xl font-bold">Cashback Pro</span>
         </div>
@@ -59,6 +65,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
         <nav className="mt-8">
           {menuItems.map((item) => {
             const Icon = item.icon;
+            const isActive = currentPage === item.id;
             return (
               <button
                 key={item.id}
@@ -67,10 +74,15 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
                   setSidebarOpen(false);
                 }}
                 className={`w-full flex items-center px-6 py-3 text-left transition-colors ${
-                  currentPage === item.id
-                    ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
+                  isActive
+                    ? `text-white border-r-2`
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
+                style={isActive ? {
+                  backgroundColor: primaryColor + '20',
+                  color: primaryColor,
+                  borderRightColor: primaryColor
+                } : {}}
               >
                 <Icon className="w-5 h-5 mr-3" />
                 {item.label}

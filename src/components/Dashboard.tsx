@@ -12,9 +12,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onPageChange }) => {
     movements = [], 
     rewards = [], 
     referrals = [], 
-    clearAllData 
+    clearAllData,
+    settings 
   } = useApp();
   const { customers = [] } = useCustomerContext();
+  const primaryColor = settings.program.primaryColor;
+  const secondaryColor = settings.program.secondaryColor;
 
   // Função para obter nome completo
   const getFullName = (customer: any): string => {
@@ -118,21 +121,51 @@ const Dashboard: React.FC<DashboardProps> = ({ onPageChange }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button 
             onClick={() => onPageChange('customers')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg transition-colors"
+            style={{
+              ':hover': {
+                borderColor: primaryColor,
+                backgroundColor: primaryColor + '10'
+              }
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = primaryColor;
+              e.currentTarget.style.backgroundColor = primaryColor + '10';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#d1d5db';
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600">Adicionar Cliente</p>
           </button>
           <button 
             onClick={() => onPageChange('rewards')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg transition-colors"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = secondaryColor;
+              e.currentTarget.style.backgroundColor = secondaryColor + '10';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#d1d5db';
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             <Gift className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600">Nova Recompensa</p>
           </button>
           <button 
             onClick={() => onPageChange('movements')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg transition-colors"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#8b5cf6';
+              e.currentTarget.style.backgroundColor = '#8b5cf610';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#d1d5db';
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             <TrendingUp className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600">Registrar Pontos</p>

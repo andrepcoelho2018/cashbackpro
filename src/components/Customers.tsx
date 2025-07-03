@@ -8,6 +8,9 @@ import PhoneInput from './PhoneInput';
 
 const Customers: React.FC = () => {
   const { customers, levels, validateCustomer, addCustomer } = useCustomerContext();
+  const { settings } = useApp();
+  const primaryColor = settings.program.primaryColor;
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -143,7 +146,17 @@ const Customers: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900">Clientes</h1>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+          className="text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+          style={{ 
+            backgroundColor: primaryColor,
+            ':hover': { backgroundColor: primaryColor + 'dd' }
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = primaryColor + 'dd';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = primaryColor;
+          }}
         >
           <Plus className="w-4 h-4 mr-2" />
           Novo Cliente
@@ -160,13 +173,36 @@ const Customers: React.FC = () => {
               placeholder="Buscar por nome, email ou CPF..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+              style={{ 
+                '--tw-ring-color': primaryColor + '50',
+                'borderColor': 'var(--tw-ring-color)'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = primaryColor;
+                e.currentTarget.style.boxShadow = `0 0 0 2px ${primaryColor}50`;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#d1d5db';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+            style={{ 
+              '--tw-ring-color': primaryColor + '50'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = primaryColor;
+              e.currentTarget.style.boxShadow = `0 0 0 2px ${primaryColor}50`;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = '#d1d5db';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
             <option value="all">Todos os Status</option>
             <option value="active">Ativo</option>
@@ -375,7 +411,18 @@ const Customers: React.FC = () => {
                     type="text"
                     value={newCustomer.firstName}
                     onChange={(e) => setNewCustomer({...newCustomer, firstName: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                    style={{ 
+                      '--tw-ring-color': primaryColor + '50'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = primaryColor;
+                      e.currentTarget.style.boxShadow = `0 0 0 2px ${primaryColor}50`;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
                     placeholder="João"
                   />
                 </div>
@@ -386,7 +433,18 @@ const Customers: React.FC = () => {
                     type="text"
                     value={newCustomer.lastName}
                     onChange={(e) => setNewCustomer({...newCustomer, lastName: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                    style={{ 
+                      '--tw-ring-color': primaryColor + '50'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = primaryColor;
+                      e.currentTarget.style.boxShadow = `0 0 0 2px ${primaryColor}50`;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
                     placeholder="Silva"
                   />
                 </div>
@@ -400,9 +458,24 @@ const Customers: React.FC = () => {
                   onChange={(e) => handleDocumentChange(e.target.value)}
                   placeholder="000.000.000-00"
                   maxLength={14}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${
                     validationResult && !validationResult.isValid ? 'border-red-300' : 'border-gray-300'
                   }`}
+                  style={{ 
+                    '--tw-ring-color': primaryColor + '50'
+                  }}
+                  onFocus={(e) => {
+                    if (!validationResult || validationResult.isValid) {
+                      e.currentTarget.style.borderColor = primaryColor;
+                      e.currentTarget.style.boxShadow = `0 0 0 2px ${primaryColor}50`;
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!validationResult || validationResult.isValid) {
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }
+                  }}
                 />
                 {validationResult && !validationResult.isValid && (
                   <div className="mt-1 text-sm text-red-600">
@@ -418,9 +491,24 @@ const Customers: React.FC = () => {
                   type="email"
                   value={newCustomer.email}
                   onChange={(e) => handleEmailChange(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${
                     validationResult?.conflicts?.duplicateEmail ? 'border-red-300' : 'border-gray-300'
                   }`}
+                  style={{ 
+                    '--tw-ring-color': primaryColor + '50'
+                  }}
+                  onFocus={(e) => {
+                    if (!validationResult?.conflicts?.duplicateEmail) {
+                      e.currentTarget.style.borderColor = primaryColor;
+                      e.currentTarget.style.boxShadow = `0 0 0 2px ${primaryColor}50`;
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!validationResult?.conflicts?.duplicateEmail) {
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }
+                  }}
                   placeholder="joao@email.com"
                 />
                 {validationResult?.conflicts?.duplicateEmail && (
@@ -448,7 +536,18 @@ const Customers: React.FC = () => {
                   type="number"
                   value={newCustomer.points}
                   onChange={(e) => setNewCustomer({...newCustomer, points: Number(e.target.value)})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                  style={{ 
+                    '--tw-ring-color': primaryColor + '50'
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = primaryColor;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${primaryColor}50`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 />
               </div>
 
@@ -475,7 +574,20 @@ const Customers: React.FC = () => {
               <button
                 onClick={handleAddCustomer}
                 disabled={!validationResult?.isValid}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="flex-1 text-white px-4 py-2 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                style={{ 
+                  backgroundColor: validationResult?.isValid ? primaryColor : '#d1d5db'
+                }}
+                onMouseEnter={(e) => {
+                  if (validationResult?.isValid) {
+                    e.currentTarget.style.backgroundColor = primaryColor + 'dd';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (validationResult?.isValid) {
+                    e.currentTarget.style.backgroundColor = primaryColor;
+                  }
+                }}
               >
                 Adicionar Cliente
               </button>
